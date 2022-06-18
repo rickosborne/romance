@@ -4,11 +4,9 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.java.Log;
 import org.junit.jupiter.api.Test;
-import org.rickosborne.audiobookstore.AudiobookStore;
-import org.rickosborne.audiobookstore.client.response.Login;
-import org.rickosborne.audiobookstore.client.response.UserInformation2;
-import retrofit2.Retrofit;
-import retrofit2.converter.jackson.JacksonConverterFactory;
+import org.rickosborne.romance.client.client.AudiobookStoreService;
+import org.rickosborne.romance.client.client.response.Login;
+import org.rickosborne.romance.client.client.response.UserInformation2;
 
 import java.util.UUID;
 import java.util.function.Supplier;

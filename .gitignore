@@ -1,3 +1,4 @@
 .cache/
 .credentials/
 *.iml
+book-data/
