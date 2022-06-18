@@ -18,12 +18,16 @@
           <entry name="$MAVEN_REPOSITORY$/info/picocli/picocli/4.6.3/picocli-4.6.3.jar" />
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.24/lombok-1.18.24.jar" />
         </processorPath>
-        <module name="client" />
+        <module name="audiobookstore-client" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="client" target="11" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="audiobookstore-client" options="-Aproject=org.rickosborne.audiobookstore/audiobookstore-client" />
       <module name="client" options="-Aproject=org.rickosborne.audiobookstore/audiobookstore-client" />
     </option>
   </component>

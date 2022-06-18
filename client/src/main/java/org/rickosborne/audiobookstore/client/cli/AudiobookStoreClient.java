@@ -10,7 +10,8 @@ import java.util.concurrent.Callable;
     version = "1.0",
     subcommands = {
         LastCommand.class,
-        SearchCommand.class
+        SearchCommand.class,
+        AuthCommand.class
     }
 )
 public class AudiobookStoreClient implements Callable<Integer> {

@@ -46,7 +46,7 @@ public class DocTabbed {
             .title(suggestion.getTitle())
             .absUrl(Optional.ofNullable(suggestion.getUrlPath()).map(p -> {
                 try {
-                    return new URL(AudiobookStore.SUGGEST_BASE + "/" + p);
+                    return new URL(AudiobookStore.SUGGEST_BASE + "/audiobooks/" + p + ".aspx");
                 } catch (MalformedURLException e) {
                     throw new RuntimeException(e);
                 }
