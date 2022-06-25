@@ -3,12 +3,15 @@ package org.rickosborne.romance.db.model;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import org.rickosborne.romance.util.BookRating;
 import org.rickosborne.romance.util.YesNoUnknown;
 
 import java.net.URL;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_EMPTY)

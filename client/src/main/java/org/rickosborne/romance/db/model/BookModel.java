@@ -1,5 +1,6 @@
 package org.rickosborne.romance.db.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.Data;
@@ -15,6 +16,7 @@ import java.util.TreeSet;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
+@JsonIgnoreProperties({"stars"})
 public class BookModel {
     private URL audiobookStoreUrl;
     private String authorName;
@@ -56,19 +58,16 @@ public class BookModel {
     private String title;
     private String warnings;
 
+    @SuppressWarnings("unused")  // Jackson
     public String getStars() {
         return StringStuff.starsFromNumber(ratings.get(BookRating.Overall));
     }
-
-//    @JsonProperty(value = "tags")
-//    protected Collection<String> getTagsSorted() {
-//        return tags.stream().sorted().collect(Collectors.toList());
-//    }
 
     @Data
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public static class MainChar {
         private String age;
+        private String attachment;
         private String gender;
         private String name;
         private String profession;

@@ -2,6 +2,7 @@ package org.rickosborne.romance.util;
 
 public class StringStuff {
     public static final String[] FRACTIONS = new String[]{"", "¼", "½", "¾"};
+    public static final String CRLF = "\n";
 
     public static boolean nonBlank(final String t) {
         return t != null && !t.isBlank();

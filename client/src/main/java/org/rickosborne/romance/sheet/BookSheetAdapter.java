@@ -48,11 +48,13 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
         setters.put("mc1Pronouns", stringSetter(ifNotNull((m, s) -> m.getMc1().setPronouns(s))));
         setters.put("mc1Age", stringSetter(ifNotNull((m, s) -> m.getMc1().setAge(s))));
         setters.put("mc1Profession", stringSetter(ifNotNull((m, s) -> m.getMc1().setProfession(s))));
+        setters.put("mc1Attachment", stringSetter(ifNotNull((m, s) -> m.getMc1().setAttachment(s))));
         setters.put("mc2Name", stringSetter(ifNotNull((m, s) -> m.getMc2().setName(s))));
         setters.put("mc2Gender", stringSetter(ifNotNull((m, s) -> m.getMc2().setGender(s))));
         setters.put("mc2Pronouns", stringSetter(ifNotNull((m, s) -> m.getMc2().setPronouns(s))));
         setters.put("mc2Age", stringSetter(ifNotNull((m, s) -> m.getMc2().setAge(s))));
         setters.put("mc2Profession", stringSetter(ifNotNull((m, s) -> m.getMc2().setProfession(s))));
+        setters.put("mc2Attachment", stringSetter(ifNotNull((m, s) -> m.getMc2().setAttachment(s))));
         setters.put("sexScenes", stringSetter(BookModel::setSexScenes));
         setters.put("sexVariety", stringSetter(BookModel::setSexVariety));
         setters.put("sexExplicitness", stringSetter(BookModel::setSexExplicitness));
@@ -78,8 +80,7 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
         setters.put("tag5", stringSetter(ifNotNull((m, s) -> m.getTags().add(s))));
         setters.put("tag6", stringSetter(ifNotNull((m, s) -> m.getTags().add(s))));
         setters.put("tag7", stringSetter(ifNotNull((m, s) -> m.getTags().add(s))));
-        setters.put("tagsJoined", ModelSheetAdapter::setNothing);
-        setters.put("tagsMissing", ModelSheetAdapter::setNothing);
+        setters.put("genTagsJoined", ModelSheetAdapter::setNothing);
         setters.put("rateCharacters", doubleSetter(ifNotNull((m, s) -> m.getRatings().put(BookRating.CharacterDepth, s))));
         setters.put("rateGrowth", doubleSetter(ifNotNull((m, s) -> m.getRatings().put(BookRating.CharacterGrowth, s))));
         setters.put("rateConsistency", doubleSetter(ifNotNull((m, s) -> m.getRatings().put(BookRating.CharacterConsistency, s))));

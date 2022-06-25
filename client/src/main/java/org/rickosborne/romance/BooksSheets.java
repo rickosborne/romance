@@ -6,7 +6,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.sheets.v4.Sheets.Spreadsheets;
 import com.google.api.services.sheets.v4.model.Sheet;
 import com.google.api.services.sheets.v4.model.Spreadsheet;
-import org.rickosborne.romance.client.client.google.Google;
+import org.rickosborne.romance.client.google.Google;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;

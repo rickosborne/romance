@@ -13,7 +13,7 @@
           <archive>
             <manifest>
               <addClasspath>true</addClasspath>
-              <mainClass>org.rickosborne.romance.client.cli.AudiobookStoreClient</mainClass>
+              <mainClass>org.rickosborne.romance.client.command.AudiobookStoreClient</mainClass>
             </manifest>
           </archive>
         </configuration>
@@ -30,7 +30,7 @@
             <configuration>
               <transformers>
                 <transformer>
-                  <mainClass>org.rickosborne.romance.client.cli.AudiobookStoreClient</mainClass>
+                  <mainClass>org.rickosborne.romance.client.command.AudiobookStoreClient</mainClass>
                 </transformer>
               </transformers>
             </configuration>

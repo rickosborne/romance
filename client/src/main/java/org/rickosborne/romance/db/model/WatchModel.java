@@ -8,7 +8,7 @@ import java.net.URL;
 @Data
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class WatchModel {
-    private String bookTitle;
     private String authorName;
+    private String bookTitle;
     private URL goodreadsUrl;
 }

@@ -4,9 +4,9 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.java.Log;
 import org.junit.jupiter.api.Test;
-import org.rickosborne.romance.client.client.AudiobookStoreService;
-import org.rickosborne.romance.client.client.response.Login;
-import org.rickosborne.romance.client.client.response.UserInformation2;
+import org.rickosborne.romance.client.AudiobookStoreService;
+import org.rickosborne.romance.client.response.Login;
+import org.rickosborne.romance.client.response.UserInformation2;
 
 import java.util.UUID;
 import java.util.function.Supplier;

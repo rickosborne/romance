@@ -1,5 +1,6 @@
 package org.rickosborne.romance.db.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.Data;
@@ -14,6 +15,7 @@ import java.util.TreeSet;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
+@JsonIgnoreProperties({"meanPagesPerHour"})
 public class NarratorModel {
     private String accent;
     private URL goodreadsUrl;

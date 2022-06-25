@@ -107,7 +107,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>org.rickosborne.romance.client.cli.RomanceClient</mainClass>
+                            <mainClass>org.rickosborne.romance.client.command.RomanceClient</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
@@ -139,7 +139,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>org.rickosborne.romance.client.cli.RomanceClient</mainClass>
+                                    <mainClass>org.rickosborne.romance.client.command.RomanceClient</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>

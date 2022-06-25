@@ -3,6 +3,7 @@ package org.rickosborne.romance.sheet;
 import lombok.NonNull;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
+import org.rickosborne.romance.db.model.SchemaAttribute;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -11,6 +12,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.stream.Stream;
 
 public interface ModelSheetAdapter<M> {
     static <M> void setNothing(final M model, final Object unused) {
@@ -101,6 +103,30 @@ public interface ModelSheetAdapter<M> {
                 throw new IllegalArgumentException("Cannot convert to LocalDate " + v.getClass().getSimpleName() + ": " + v);
             }
         };
+    }
+
+    default void putSetters(
+        @NonNull final Map<String, BiConsumer<M, Object>> setters,
+        @NonNull final Stream<SchemaAttribute<M, Object>> attributes
+    ) {
+        attributes.forEach(attr -> {
+            final Class<?> attrType = attr.getAttributeType();
+            final BiConsumer<M, Object> setter;
+            if (attrType == String.class) {
+                setter = stringSetter(attr::setAttribute);
+            } else if (attrType == LocalDate.class) {
+                setter = localDateSetter(attr::setAttribute);
+            } else if (attrType == Integer.class) {
+                setter = intSetter(attr::setAttribute);
+            } else if (attrType == Double.class) {
+                setter = doubleSetter(attr::setAttribute);
+            } else if (attrType == URL.class) {
+                setter = urlSetter(attr::setAttribute);
+            } else {
+                throw new IllegalArgumentException("No setter for attribute type: " + attr.getModelType() + "#" + attr.getAttributeName() + "<" + attrType.getSimpleName() + ">");
+            }
+            setters.put(attr.getAttributeName(), setter);
+        });
     }
 
     default void setKeyValue(
