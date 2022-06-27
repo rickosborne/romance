@@ -6,6 +6,7 @@ import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.util.BookRating;
+import org.rickosborne.romance.util.ModelSetter;
 import org.rickosborne.romance.util.YesNoUnknown;
 
 import java.util.HashMap;
@@ -40,13 +41,13 @@ public class AuthorSheetAdapter implements ModelSheetAdapter<AuthorModel> {
         setters.put("rate5", intSetter(AuthorModel::setFiveStarCount));
         setters.put("rateMin", doubleSetter(AuthorModel::setMinRating));
         setters.put("rateMax", doubleSetter(AuthorModel::setMaxRating));
-        setters.put("rateRange", ModelSheetAdapter::setNothing);
+        setters.put("rateRange", ModelSetter::setNothing);
         setters.put("statsAvgPages", doubleSetter(AuthorModel::setMeanPages));
         setters.put("statsAvgDuration", doubleSetter(AuthorModel::setMeanDurationHours));
         setters.put("statsStars", stringSetter(AuthorModel::setStars));
         setters.put("genTwitterLink", urlSetter(AuthorModel::setTwitterUrl));
-        setters.put("genGoodreads", ModelSheetAdapter::setNothing);
-        setters.put("genRating", ModelSheetAdapter::setNothing);
+        setters.put("genGoodreads", ModelSetter::setNothing);
+        setters.put("genRating", ModelSetter::setNothing);
     }
 
     @Override

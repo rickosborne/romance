@@ -6,6 +6,7 @@ import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.model.TagModel;
 import org.rickosborne.romance.util.BookRating;
+import org.rickosborne.romance.util.ModelSetter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,9 +25,9 @@ public class TagSheetAdapter implements ModelSheetAdapter<TagModel> {
         setters.put("countRated", intSetter(TagModel::setRatedCount));
         setters.put("countHours", doubleSetter(TagModel::setRatedDurationHours));
         setters.put("rateAvgOverall", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.Overall, r))));
-        setters.put("rateStars", ModelSheetAdapter::setNothing);
+        setters.put("rateStars", ModelSetter::setNothing);
         setters.put("calcPositiveRate", doubleSetter(TagModel::setPositiveRate));
-        setters.put("calcSumDurationPlusMinus", ModelSheetAdapter::setNothing);
+        setters.put("calcSumDurationPlusMinus", ModelSetter::setNothing);
         setters.put("calcPositiveDuration", doubleSetter(TagModel::setPositiveDurationHours));
         setters.put("calcLikelihoodOfPositive", doubleSetter(TagModel::setPositiveLikelihood));
     }

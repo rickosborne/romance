@@ -7,10 +7,12 @@ import org.rickosborne.romance.db.model.SchemaAttribute;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.rickosborne.romance.util.StringStuff.CRLF;
 
 @Builder
+@Getter
 @RequiredArgsConstructor
 public class Diff<M> {
     private final M after;
@@ -43,7 +45,7 @@ public class Diff<M> {
 
     @RequiredArgsConstructor
     @Getter
-    enum Operation {
+    public enum Operation {
         Add("+ "),
         Change("~ "),
         Delete("- "),
@@ -53,6 +55,7 @@ public class Diff<M> {
     }
 
     @Builder
+    @Getter
     @RequiredArgsConstructor
     public static class AttributeDiff<M, A> {
         private final M afterModel;

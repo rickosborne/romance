@@ -1,9 +1,17 @@
 package org.rickosborne.romance.client.command;
 
+import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.sheets.v4.Sheets;
+import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
+import com.google.api.services.sheets.v4.model.CellData;
+import com.google.api.services.sheets.v4.model.ExtendedValue;
+import com.google.api.services.sheets.v4.model.GridCoordinate;
 import com.google.api.services.sheets.v4.model.GridProperties;
+import com.google.api.services.sheets.v4.model.Request;
+import com.google.api.services.sheets.v4.model.RowData;
 import com.google.api.services.sheets.v4.model.Sheet;
 import com.google.api.services.sheets.v4.model.Spreadsheet;
+import com.google.api.services.sheets.v4.model.UpdateCellsRequest;
 import lombok.Getter;
 import lombok.extern.java.Log;
 import org.rickosborne.romance.BooksSheets;
@@ -17,11 +25,15 @@ import org.rickosborne.romance.sheet.ModelSheetAdapter;
 import picocli.CommandLine;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.rickosborne.romance.util.StringStuff.stringify;
@@ -111,11 +123,14 @@ public class DataFromSheetCommand implements Callable<Integer> {
         final int frozenRowCount = Optional.ofNullable(gridProperties.getFrozenRowCount()).orElse(0);
         final int colCount = Optional.ofNullable(gridProperties.getColumnCount()).orElse(0);
         final NamingConvention namingConvention = new NamingConvention();
+
         if (frozenRowCount == 0 || colCount == 0) {
             return;
         }
         final String[] colKeys = getColumnKeys(rows, frozenRowCount, colCount, namingConvention);
+        final Map<String, Integer> colNums = IntStream.range(0, colKeys.length).boxed().collect(Collectors.toMap(i -> colKeys[i], i -> i));
         System.out.println(tabTitle + ": " + String.join(", ", colKeys));
+        final List<Request> changeRequests = new LinkedList<>();
         for (int rowNum = frozenRowCount; rowNum < rows.size(); rowNum++) {
             final List<Object> row = rows.get(rowNum);
             if (row == null || row.isEmpty()) {
@@ -129,7 +144,51 @@ public class DataFromSheetCommand implements Callable<Integer> {
                 }
             });
             final M existing = jsonStore.findLikeFromCache(record);
+            if (existing != null) {
+                final Map<String, String> changes = sheetAdapter.findChangesToSheet(record, existing);
+                if (!changes.isEmpty()) {
+                    System.out.println("~~~ " + jsonStore.idFromModel(existing));
+//                    System.out.println(changes);
+                    for (final Map.Entry<String, String> entry : changes.entrySet()) {
+                        final String fieldName = entry.getKey();
+                        final String value = entry.getValue();
+                        final Integer colNum = colNums.get(fieldName);
+                        if (colNum == null) {
+                            throw new IllegalArgumentException("Could not find column for: " + fieldName);
+                        }
+                        final GridCoordinate coord = new GridCoordinate()
+                            .setColumnIndex(colNum)
+                            .setRowIndex(rowNum)
+                            .setSheetId(sheet.getProperties().getSheetId());
+                        final Request request = new Request().setUpdateCells(
+                            new UpdateCellsRequest()
+                                .setStart(coord)
+                                .setFields("userEnteredValue")
+                                .setRows(List.of(
+                                    new RowData().setValues(List.of(
+                                            new CellData()
+                                                .setUserEnteredValue(new ExtendedValue().setStringValue(value))
+                                        )
+                                    ))
+                                )
+
+                        );
+                        request.setFactory(GsonFactory.getDefaultInstance());
+                        changeRequests.add(request);
+                        System.out.println(request);
+                    }
+                }
+            }
             jsonStore.saveIfChanged(modelSchema.mergeModels(existing, record));
+        }
+        if (!changeRequests.isEmpty()) {
+            final BatchUpdateSpreadsheetRequest updateSpreadsheetRequest = new BatchUpdateSpreadsheetRequest()
+                .setRequests(changeRequests);
+            try {
+                spreadsheets.batchUpdate(spreadsheet.getSpreadsheetId(), updateSpreadsheetRequest).execute();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }

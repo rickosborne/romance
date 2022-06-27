@@ -27,7 +27,7 @@ public class Google {
     public static final String ACCESS_TYPE_OFFLINE = "offline";
     public static final Path CREDENTIALS_PATH_DEFAULT = Path.of(".credentials/google.json");
     public static final GsonFactory JSON_FACTORY = getDefaultInstance();
-    public static final List<String> SCOPES = List.of(SheetsScopes.SPREADSHEETS_READONLY);
+    public static final List<String> SCOPES = List.of(SheetsScopes.SPREADSHEETS);
     public static final Path TOKENS_FILE_DEFAULT = Path.of(".credentials");
 
     public static Credential getCredentials(@NonNull final String userId) {

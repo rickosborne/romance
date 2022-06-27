@@ -6,6 +6,7 @@ import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.model.SeriesModel;
 import org.rickosborne.romance.util.BookRating;
+import org.rickosborne.romance.util.ModelSetter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +23,7 @@ public class SeriesSheetAdapter implements ModelSheetAdapter<SeriesModel> {
         setters.put("linkGoodreads", urlSetter(SeriesModel::setGoodreadsUrl));
         setters.put("statsBookCount", intSetter(SeriesModel::setOwnedCount));
         setters.put("statsAvgRating", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.Overall, r))));
-        setters.put("statsStars", ModelSheetAdapter::setNothing);
+        setters.put("statsStars", ModelSetter::setNothing);
     }
 
     @Override

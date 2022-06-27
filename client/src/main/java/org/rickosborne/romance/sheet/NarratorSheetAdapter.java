@@ -5,6 +5,7 @@ import lombok.NonNull;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.model.NarratorModel;
+import org.rickosborne.romance.util.ModelSetter;
 import org.rickosborne.romance.util.NarratorRating;
 
 import java.util.HashMap;
@@ -35,12 +36,12 @@ public class NarratorSheetAdapter implements ModelSheetAdapter<NarratorModel> {
         setters.put("negNeg1", stringSetter(ifNotNull((m, s) -> m.getNegatives().add(s))));
         setters.put("negNeg2", stringSetter(ifNotNull((m, s) -> m.getNegatives().add(s))));
         setters.put("negNeg3", stringSetter(ifNotNull((m, s) -> m.getNegatives().add(s))));
-        setters.put("negOverallRating", ModelSheetAdapter::setNothing);
+        setters.put("negOverallRating", ModelSetter::setNothing);
         setters.put("statsTotalDuration", doubleSetter(NarratorModel::setTotalDurationHours));
         setters.put("statsTotalPages", intSetter(NarratorModel::setTotalPages));
-        setters.put("statsAvgPph", ModelSheetAdapter::setNothing);
-        setters.put("statsStars", ModelSheetAdapter::setNothing);
-        setters.put("genGoodreadsMarkdownLink", ModelSheetAdapter::setNothing);
+        setters.put("statsAvgPph", ModelSetter::setNothing);
+        setters.put("statsStars", ModelSetter::setNothing);
+        setters.put("genGoodreadsMarkdownLink", ModelSetter::setNothing);
     }
 
     @Override
