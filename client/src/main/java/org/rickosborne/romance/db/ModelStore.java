@@ -1,5 +1,8 @@
 package org.rickosborne.romance.db;
 
+import java.util.function.Predicate;
+import java.util.stream.Stream;
+
 public interface ModelStore<M> {
     default Diff<M> diffFromCache(final M model) {
         final M cached = findLikeFromCache(model);
@@ -13,6 +16,14 @@ public interface ModelStore<M> {
     M findById(final String id);
 
     M findByIdFromCache(final String id);
+
+    default M findLikeOrMatch(final M model, final Predicate<M> match) {
+        final String id = idFromModel(model);
+        if (id != null) {
+            return findById(id);
+        }
+        return stream().filter(match).findAny().orElse(null);
+    }
 
     default M findLike(final M model) {
         if (model == null) {
@@ -31,7 +42,7 @@ public interface ModelStore<M> {
         }
         final String id = idFromModel(model);
         if (id == null) {
-            throw new NullPointerException("Model has no id: " + model.getClass().getSimpleName());
+            throw new NullPointerException("Model has no id: " + model.getClass().getSimpleName() + ": " + model);
         }
         return findByIdFromCache(id);
     }
@@ -48,10 +59,15 @@ public interface ModelStore<M> {
         final Diff<M> diff = diffFromCache(model);
         if (diff.hasChanged()) {
             final String id = idFromModel(model);
+            if (id == null) {
+                throw new NullPointerException("No id: " + model);
+            }
             System.out.println("~~~ " + getDbModel().getTypeName() + "/" + id);
             System.out.println(diff.asDiffLines());
             return save(model);
         }
         return model;
     }
+
+    Stream<M> stream();
 }

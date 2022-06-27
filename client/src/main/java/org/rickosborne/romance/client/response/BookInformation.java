@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.ToString;
 
+import java.net.URL;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -34,8 +35,14 @@ public class BookInformation {
     Boolean completed;
     @JsonProperty("CompletionDateTime")
     String completionDateTime;
+    @JsonIgnore
+    @Getter(lazy = true)
+    private final Instant completionInstant = Optional.ofNullable(completionDateTime)
+        .map(pd -> Instant.parse(pd + "Z"))
+        .filter(pd -> pd.isAfter(Instant.ofEpochSecond(1)))
+        .orElse(null);
     @JsonProperty("ImageUrl")
-    String imageUrl;
+    URL imageUrl;
     @JsonProperty("Narrators")
     String narrators;
     @JsonProperty("PlayBackPosition")
@@ -53,7 +60,7 @@ public class BookInformation {
     @JsonProperty("IsRefunded")
     Boolean refunded;
     @JsonProperty("Runtime")
-    Double runtime;
+    Double runtime; // seconds
     @JsonProperty("SKU")
     String sku;
     @JsonProperty("Title")
@@ -61,9 +68,18 @@ public class BookInformation {
     @JsonProperty("TotalSize")
     Long totalSize;
     @JsonProperty("Url")
-    String url;
+    URL url;
 
+    @JsonIgnore
     public String getCleanTitle() {
         return title == null ? null : title.replace(" (Unabridged)", "");
+    }
+
+    @JsonIgnore
+    public Double getRuntimeHours() {
+        if (runtime == null || runtime == 0d) {
+            return null;
+        }
+        return Math.round(runtime / 36d) / 100d;
     }
 }

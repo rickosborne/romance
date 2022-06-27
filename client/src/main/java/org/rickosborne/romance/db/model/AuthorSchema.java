@@ -10,6 +10,11 @@ public class AuthorSchema implements ModelSchema<AuthorModel> {
     private final List<AuthorAttributes> attributes = List.of(AuthorAttributes.values());
 
     @Override
+    public AuthorModel buildModel() {
+        return new AuthorModel();
+    }
+
+    @Override
     public List<String> idValuesFromModel(final AuthorModel model) {
         if (model == null) {
             return Collections.emptyList();

@@ -1,8 +1,23 @@
 package org.rickosborne.romance.util;
 
+import lombok.NonNull;
+import org.apache.commons.codec.digest.DigestUtils;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.time.LocalDate;
+
 public class StringStuff {
-    public static final String[] FRACTIONS = new String[]{"", "¼", "½", "¾"};
     public static final String CRLF = "\n";
+    public static final String[] FRACTIONS = new String[]{"", "¼", "½", "¾"};
+
+    public static String cacheName(@NonNull final URL url) {
+        return String.join("-",
+            DigestUtils.sha256Hex(url.toString()).substring(0, 8),
+            url.getHost().replace("www.", ""),
+            url.getPath().replaceAll("\\W+", "-")
+        );
+    }
 
     public static boolean nonBlank(final String t) {
         return t != null && !t.isBlank();
@@ -28,6 +43,13 @@ public class StringStuff {
         }
     }
 
+    public static LocalDate toLocalDate(final String s) {
+        if (s == null || s.isBlank()) {
+            return null;
+        }
+        return LocalDate.parse(s);
+    }
+
     public static String ucFirst(final String text) {
         if (text == null) {
             return null;
@@ -35,6 +57,17 @@ public class StringStuff {
             return text.toUpperCase();
         } else {
             return text.substring(0, 1).toUpperCase() + text.substring(1);
+        }
+    }
+
+    public static URL urlFromString(final String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        try {
+            return new URL(url);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
         }
     }
 }

@@ -9,6 +9,11 @@ public class NarratorSchema implements ModelSchema<NarratorModel> {
     private final List<NarratorAttributes> attributes = List.of(NarratorAttributes.values());
 
     @Override
+    public NarratorModel buildModel() {
+        return new NarratorModel();
+    }
+
+    @Override
     public List<String> idValuesFromModel(final NarratorModel model) {
         return List.of(model.getName());
     }

@@ -11,6 +11,7 @@ import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.JsonStore;
 import org.rickosborne.romance.db.json.JsonStoreFactory;
+import org.rickosborne.romance.db.model.ModelSchema;
 import org.rickosborne.romance.sheet.AdapterFactory;
 import org.rickosborne.romance.sheet.ModelSheetAdapter;
 import picocli.CommandLine;
@@ -106,6 +107,7 @@ public class DataFromSheetCommand implements Callable<Integer> {
         final GridProperties gridProperties = sheet.getProperties().getGridProperties();
         final Class<M> modelType = sheetAdapter.getModelType();
         final JsonStore<M> jsonStore = jsonStoreFactory.buildJsonStore(modelType);
+        final ModelSchema<M> modelSchema = jsonStore.getModelSchema();
         final int frozenRowCount = Optional.ofNullable(gridProperties.getFrozenRowCount()).orElse(0);
         final int colCount = Optional.ofNullable(gridProperties.getColumnCount()).orElse(0);
         final NamingConvention namingConvention = new NamingConvention();
@@ -126,7 +128,8 @@ public class DataFromSheetCommand implements Callable<Integer> {
                     ma.setKeyValue(model, colKey, cellValue);
                 }
             });
-            jsonStore.saveIfChanged(record);
+            final M existing = jsonStore.findLikeFromCache(record);
+            jsonStore.saveIfChanged(modelSchema.mergeModels(existing, record));
         }
     }
 }

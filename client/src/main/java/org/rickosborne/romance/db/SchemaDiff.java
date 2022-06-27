@@ -1,6 +1,7 @@
 package org.rickosborne.romance.db;
 
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.rickosborne.romance.db.model.ModelSchema;
 import org.rickosborne.romance.db.model.ModelSchemas;
 import org.rickosborne.romance.db.model.SchemaAttribute;

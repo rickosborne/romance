@@ -20,7 +20,7 @@ import java.util.function.Supplier;
 
 @Getter
 public enum DbModel {
-    Book("book", "Books", BookModel.class, BookModel::new, BookSheetAdapter.class),
+    Book("book", "Books", BookModel.class, BookModel::build, BookSheetAdapter.class),
     Author("author", "Authors", AuthorModel.class, AuthorModel::new, AuthorSheetAdapter.class),
     Narrator("narrator", "Narrators", NarratorModel.class, NarratorModel::new, NarratorSheetAdapter.class),
     Series("series", "Series", SeriesModel.class, SeriesModel::new, SeriesSheetAdapter.class),

@@ -9,6 +9,11 @@ public class TagSchema implements ModelSchema<TagModel> {
     private final List<TagAttributes> attributes = List.of(TagAttributes.values());
 
     @Override
+    public TagModel buildModel() {
+        return new TagModel();
+    }
+
+    @Override
     public List<String> idValuesFromModel(final TagModel model) {
         return List.of(model.getName());
     }

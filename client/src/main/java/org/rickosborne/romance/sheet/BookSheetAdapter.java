@@ -37,9 +37,11 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
                 localDateSetter(BookModel::setDateRead).accept(m, o);
             }
         });
+        setters.put("isbn", stringSetter(BookModel::setIsbn));
         setters.put("linkGoodreads", urlSetter(BookModel::setGoodreadsUrl));
         setters.put("linkAudiobookstore", urlSetter(BookModel::setAudiobookStoreUrl));
         setters.put("linkRickReview", urlSetter(BookModel::setRickReviewUrl));
+        setters.put("linkImage", urlSetter(BookModel::setImageUrl));
         setters.put("calcAuthorBookCount", ModelSheetAdapter::setNothing);
         setters.put("calcNarratorBookCount", ModelSheetAdapter::setNothing);
         setters.put("calcDurationFilled", ModelSheetAdapter::setNothing);

@@ -9,6 +9,11 @@ public class SeriesSchema implements ModelSchema<SeriesModel> {
     private final List<SeriesAttributes> attributes = List.of(SeriesAttributes.values());
 
     @Override
+    public SeriesModel buildModel() {
+        return new SeriesModel();
+    }
+
+    @Override
     public List<String> idValuesFromModel(final SeriesModel model) {
         return List.of(model.getName());
     }

@@ -1,6 +1,5 @@
 package org.rickosborne.romance.db.model;
 
-import lombok.Getter;
 import lombok.NonNull;
 
 import java.net.URL;
@@ -23,6 +22,8 @@ public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
     feelOther(BookModel::getFeelOther, BookModel::setFeelOther, String.class),
     genre(BookModel::getGenre, BookModel::setGenre, String.class),
     goodreadsUrl(BookModel::getGoodreadsUrl, BookModel::setGoodreadsUrl, URL.class),
+    imageUrl(BookModel::getImageUrl, BookModel::setImageUrl, URL.class),
+    isbn(BookModel::getIsbn, BookModel::setIsbn, String.class),
     hea(BookModel::getHea, BookModel::setHea, String.class),
     like(BookModel::getLike, BookModel::setLike, String.class),
     location(BookModel::getLocation, BookModel::setLocation, String.class),
@@ -66,14 +67,14 @@ public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
     }
 
     @Override
-    public Class<Object> getAttributeType() {
-        @SuppressWarnings("unchecked") final Class<Object> typed = (Class<Object>) attributeType;
-        return typed;
+    public String getAttributeName() {
+        return name();
     }
 
     @Override
-    public String getAttributeName() {
-        return name();
+    public Class<Object> getAttributeType() {
+        @SuppressWarnings("unchecked") final Class<Object> typed = (Class<Object>) attributeType;
+        return typed;
     }
 
     @Override

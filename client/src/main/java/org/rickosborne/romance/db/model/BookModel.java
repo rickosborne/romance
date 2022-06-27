@@ -3,7 +3,9 @@ package org.rickosborne.romance.db.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import lombok.Builder;
 import lombok.Data;
+import org.rickosborne.romance.db.Importable;
 import org.rickosborne.romance.util.BookRating;
 import org.rickosborne.romance.util.StringStuff;
 
@@ -15,9 +17,14 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 @Data
+@Builder(toBuilder = true)
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 @JsonIgnoreProperties({"stars"})
 public class BookModel {
+    public static BookModel build() {
+        return BookModel.builder().build();
+    }
+
     private URL audiobookStoreUrl;
     private String authorName;
     private LocalDate datePublish;
@@ -31,6 +38,8 @@ public class BookModel {
     private String genre;
     private URL goodreadsUrl;
     private String hea;
+    private URL imageUrl;
+    private String isbn;
     private String like;
     private String location;
     private final MainChar mc1 = new MainChar();
@@ -65,12 +74,25 @@ public class BookModel {
 
     @Data
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    public static class MainChar {
+    public static class MainChar implements Importable<MainChar> {
         private String age;
         private String attachment;
         private String gender;
         private String name;
         private String profession;
         private String pronouns;
+
+        @Override
+        public void importFrom(final MainChar other) {
+            if (other == null) {
+                return;
+            }
+            Importable.setIf(other.age, this::setAge);
+            Importable.setIf(other.attachment, this::setAttachment);
+            Importable.setIf(other.gender, this::setGender);
+            Importable.setIf(other.name, this::setName);
+            Importable.setIf(other.profession, this::setProfession);
+            Importable.setIf(other.pronouns, this::setPronouns);
+        }
     }
 }

@@ -1,16 +1,16 @@
 package org.rickosborne.romance.client.command;
 
 import lombok.Builder;
-import org.rickosborne.romance.AudiobookStore;
 import org.rickosborne.romance.client.response.AudiobookStoreSuggestion;
 import org.rickosborne.romance.client.response.BookInformation;
 import org.rickosborne.romance.client.response.GoodreadsAuthor;
 import org.rickosborne.romance.client.response.GoodreadsAutoComplete;
+import org.rickosborne.romance.db.model.BookModel;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
@@ -44,13 +44,7 @@ public class DocTabbed {
     public static DocTabbed fromAudiobookStoreSuggestion(final AudiobookStoreSuggestion suggestion) {
         return DocTabbed.builder()
             .title(suggestion.getTitle())
-            .absUrl(Optional.ofNullable(suggestion.getUrlPath()).map(p -> {
-                try {
-                    return new URL(AudiobookStore.SUGGEST_BASE + "/audiobooks/" + p + ".aspx");
-                } catch (MalformedURLException e) {
-                    throw new RuntimeException(e);
-                }
-            }).orElse(null))
+            .absUrl(suggestion.getUrl())
             .build();
     }
 
@@ -61,6 +55,24 @@ public class DocTabbed {
             .narrator(book.getNarrators())
             .hours(Optional.ofNullable(book.getRuntime()).map(DocTabbed::hoursFromSeconds).orElse(null))
             .purchased(book.getPurchaseInstant())
+            .imageUrl(book.getImageUrl())
+            .build();
+    }
+
+    public static DocTabbed fromBookModel(final BookModel book) {
+        return DocTabbed.builder()
+            .title(book.getTitle())
+            .author(book.getAuthorName())
+            .narrator(book.getNarratorName())
+            .hours(book.getDurationHours())
+            .absUrl(book.getAudiobookStoreUrl())
+            .grUrl(book.getGoodreadsUrl())
+            .imageUrl(book.getImageUrl())
+            .pages(book.getPages())
+            .published(Optional.ofNullable(book.getDatePublish()).map(d -> d.atStartOfDay().toInstant(ZoneOffset.UTC)).orElse(null))
+            .publisher(book.getPublisherName())
+            .purchased(Optional.ofNullable(book.getDatePurchase()).map(d -> d.atStartOfDay().toInstant(ZoneOffset.UTC)).orElse(null))
+            .read(Boolean.TRUE.equals(book.getDnf()) ? "DNF" : Optional.ofNullable(book.getDateRead()).map(d -> d.format(DateTimeFormatter.ISO_LOCAL_DATE)).orElse(null))
             .build();
     }
 
@@ -70,6 +82,7 @@ public class DocTabbed {
             .author(Optional.ofNullable(ac.getAuthor()).map(GoodreadsAuthor::getName).orElse(null))
             .pages(ac.getNumPages())
             .grUrl(ac.getFullBookUrl())
+            .imageUrl(ac.getImageUrl())
             .build();
     }
 
@@ -84,6 +97,7 @@ public class DocTabbed {
     private final String author;
     private final URL grUrl;
     private final Double hours;
+    private final URL imageUrl;
     private final String narrator;
     private final Integer pages;
     private final Instant published;
@@ -100,6 +114,7 @@ public class DocTabbed {
             .absUrl(coalesce(absUrl, other.absUrl))
             .author(coalesce(author, other.author))
             .grUrl(coalesce(grUrl, other.grUrl))
+            .imageUrl(coalesce(imageUrl, other.imageUrl))
             .hours(coalesce(hours, other.hours))
             .narrator(coalesce(narrator, other.narrator))
             .pages(coalesce(pages, other.pages))
@@ -125,6 +140,7 @@ public class DocTabbed {
         columns.add(emptyIfNull(read));
         columns.add(emptyIfNull(grUrl));
         columns.add(emptyIfNull(absUrl));
+        columns.add(emptyIfNull(imageUrl));
         return String.join("\t", columns);
     }
 }

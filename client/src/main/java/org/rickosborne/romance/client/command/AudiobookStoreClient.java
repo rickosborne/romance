@@ -13,17 +13,18 @@ import java.util.concurrent.Callable;
         SearchCommand.class,
         AuthCommand.class,
         DataFromSheetCommand.class,
-        AbsUserCommand.class
+        AbsUserCommand.class,
+        DataFromAudiobookStoreCommand.class
     }
 )
 public class AudiobookStoreClient implements Callable<Integer> {
 
+    public static void main(String[] args) {
+        System.exit(new CommandLine(new AudiobookStoreClient()).execute(args));
+    }
+
     @Override
     public Integer call() {
         return 0;
-    }
-
-    public static void main(String[] args) {
-        System.exit(new CommandLine(new AudiobookStoreClient()).execute(args));
     }
 }

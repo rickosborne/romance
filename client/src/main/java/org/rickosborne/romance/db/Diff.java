@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.rickosborne.romance.db.model.SchemaAttribute;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.rickosborne.romance.util.StringStuff.CRLF;
 
@@ -18,13 +19,17 @@ public class Diff<M> {
 
     public String asDiffLines() {
         if (changes == null || changes.isEmpty()) {
-            return "";
+            return null;
+        }
+        final List<AttributeDiff<M, ?>> printable = changes.stream().filter(c -> c.operation != Operation.Keep).collect(Collectors.toList());
+        if (printable.isEmpty()) {
+            return null;
         }
         final StringBuilder sb = new StringBuilder();
-        for (final AttributeDiff<M, ?> change : changes) {
+        for (final AttributeDiff<M, ?> change : printable) {
             final String lines = change.asDiffLines();
             if (lines != null && !lines.isBlank()) {
-                sb.append(lines).append("\n");
+                sb.append(lines);
             }
         }
         return sb.toString();
