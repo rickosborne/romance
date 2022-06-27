@@ -61,6 +61,10 @@ public class DataFromSheetCommand implements Callable<Integer> {
     @CommandLine.Option(names = {"--userid", "-u"}, description = "Google User ID/email", required = true)
     private String userId;
 
+    @SuppressWarnings("FieldMayBeFinal")
+    @CommandLine.Option(names = {"--write", "-w"}, description = "Write changes back to the spreadsheet")
+    private boolean write = false;
+
     @Override
     public Integer call() {
         final File dbFile = dbPath.toFile();
@@ -144,7 +148,7 @@ public class DataFromSheetCommand implements Callable<Integer> {
                 }
             });
             final M existing = jsonStore.findLikeFromCache(record);
-            if (existing != null) {
+            if (write && existing != null) {
                 final Map<String, String> changes = sheetAdapter.findChangesToSheet(record, existing);
                 if (!changes.isEmpty()) {
                     System.out.println("~~~ " + jsonStore.idFromModel(existing));
