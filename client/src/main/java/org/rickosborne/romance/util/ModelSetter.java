@@ -27,7 +27,7 @@ public interface ModelSetter<M> {
                     setter.accept(m, null);
                 } else if (s.endsWith("%")) {
                     setter.accept(m, Double.parseDouble(s.replace("%", "")) * 0.01);
-                } else {
+                } else if (StringStuff.isNumeric(s)) {
                     setter.accept(m, Double.parseDouble(s));
                 }
             } else {
