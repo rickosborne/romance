@@ -35,7 +35,7 @@ public class GoodreadsHtml {
     private final Path cachePath;
 
     public BookModel getBookModel(@NonNull final URL url) {
-        final HtmlScraper scraper = HtmlScraper.forUrlWithDelay(url, cachePath, DELAY_MS);
+        final HtmlScraper scraper = HtmlScraper.forUrlWithDelay(url, cachePath, DELAY_MS, null);
         final BookModel book = BookModel.build();
         for (final BookPage value : BookPage.values()) {
             value.findAndSet(book, scraper);

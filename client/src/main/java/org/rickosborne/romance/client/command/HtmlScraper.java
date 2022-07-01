@@ -8,6 +8,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.rickosborne.romance.client.JsonCookieStore;
 import org.rickosborne.romance.util.StringStuff;
 
 import java.io.File;
@@ -15,45 +16,81 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 @Log
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class HtmlScraper {
+    public static final String HTML_FILE_EXTENSION = ".html";
     public static final int TIMEOUT_MS = 5000;
+
+    public static void expire(
+        @NonNull final URL url,
+        @NonNull final Duration maxAge,
+        @NonNull final Path cachePath
+    ) {
+        final String fileName = StringStuff.cacheName(url) + HTML_FILE_EXTENSION;
+        final File file = cachePath.resolve(fileName).toFile();
+        if (!file.isFile()) {
+            return;
+        }
+        final long lastModifiedMs = file.lastModified();
+        final Instant lastModified = Instant.ofEpochMilli(lastModifiedMs);
+        if (Instant.now().minus(maxAge).isAfter(lastModified)) {
+            if (!file.delete()) {
+                log.warning("Could not delete: " + file);
+            }
+        }
+    }
 
     public static HtmlScraper forUrl(
         @NonNull final URL url,
         @NonNull final Path cachePath
     ) {
-        return forUrlWithDelay(url, cachePath, null);
+        return forUrlWithDelay(url, cachePath, null, null);
+    }
+
+    public static HtmlScraper forUrlWithCookies(
+        @NonNull final URL url,
+        @NonNull final Path cachePath,
+        @NonNull final JsonCookieStore cookieStore
+    ) {
+        return forUrlWithDelay(url, cachePath, null, cookieStore);
     }
 
     public static HtmlScraper forUrlWithDelay(
         @NonNull final URL url,
         @NonNull final Path cachePath,
-        final Integer delay
+        final Integer delay,
+        final JsonCookieStore cookieStore
     ) {
         try {
-            Document doc = fromCache(url, cachePath);
-            if (doc == null) {
-                if (delay != null) {
-                    Thread.sleep(delay);
-                }
-                doc = Jsoup.parse(url, TIMEOUT_MS);
-                final String fileName = StringStuff.cacheName(url) + ".html";
-                try (final FileWriter fw = new FileWriter(cachePath.resolve(fileName).toFile())) {
-                    fw.write(doc.outerHtml());
-                }
+            final Document cachedDoc = fromCache(url, cachePath);
+            if (cachedDoc != null) {
+                return new HtmlScraper(cachePath, cookieStore, cachedDoc);
             }
-            return new HtmlScraper(cachePath, doc);
+            if (delay != null) {
+                Thread.sleep(delay);
+            }
+            final Document liveDoc = Jsoup.connect(url.toString())
+                .cookieStore(cookieStore)
+                .timeout(TIMEOUT_MS)
+                .get();
+            final String fileName = StringStuff.cacheName(url) + HTML_FILE_EXTENSION;
+            try (final FileWriter fw = new FileWriter(cachePath.resolve(fileName).toFile())) {
+                fw.write(liveDoc.outerHtml());
+            }
+            return new HtmlScraper(cachePath, cookieStore, liveDoc);
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
 
     protected static Document fromCache(@NonNull final URL url, @NonNull final Path cachePath) {
-        final String fileName = StringStuff.cacheName(url) + ".html";
+        final String fileName = StringStuff.cacheName(url) + HTML_FILE_EXTENSION;
         final File file = cachePath.resolve(fileName).toFile();
         if (!cachePath.toFile().exists()) {
             cachePath.toFile().mkdirs();
@@ -69,10 +106,11 @@ public class HtmlScraper {
     }
 
     private final Path cachePath;
+    private final JsonCookieStore cookieStore;
     private final Element element;
 
     private HtmlScraper empty() {
-        return new HtmlScraper(cachePath, null);
+        return new HtmlScraper(cachePath, null, null);
     }
 
     public String getAttr(@NonNull final String attrName) {
@@ -87,6 +125,13 @@ public class HtmlScraper {
             return null;
         }
         return element.html();
+    }
+
+    public String getOwnText() {
+        if (element == null) {
+            return null;
+        }
+        return element.ownText();
     }
 
     public String getText() {
@@ -106,12 +151,21 @@ public class HtmlScraper {
             if (parent != null) {
                 final Element descendents = parent.selectFirst(selector);
                 if (descendents != null) {
-                    return new HtmlScraper(cachePath, parent);
+                    return new HtmlScraper(cachePath, cookieStore, parent);
                 }
                 el = parent;
             }
         }
         return empty();
+    }
+
+    public void selectMany(@NonNull final String selector, @NonNull Consumer<HtmlScraper> eachBlock) {
+        if (element == null) {
+            return;
+        }
+        for (final Element el : element.select(selector)) {
+            eachBlock.accept(new HtmlScraper(cachePath, cookieStore, el));
+        }
     }
 
     public HtmlScraper selectOne(@NonNull final String selector) {
@@ -122,7 +176,7 @@ public class HtmlScraper {
         if (elements.isEmpty()) {
             return empty();
         } else if (elements.size() == 1) {
-            return new HtmlScraper(cachePath, elements.first());
+            return new HtmlScraper(cachePath, cookieStore, elements.first());
         } else {
             throw new IllegalArgumentException("More than one element matches selector: " + selector);
         }
@@ -140,6 +194,6 @@ public class HtmlScraper {
             })
             .findFirst()
             .orElse(null);
-        return new HtmlScraper(cachePath, nextElement);
+        return new HtmlScraper(cachePath, cookieStore, nextElement);
     }
 }

@@ -49,7 +49,7 @@ public class DataFromAudiobookStoreCommand implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
-        final AudiobookStoreHtml audiobookStoreHtml = new AudiobookStoreHtml(cachePath);
+        final AudiobookStoreHtml audiobookStoreHtml = new AudiobookStoreHtml(cachePath, null);
         final CacheClient<AudiobookStoreService> cachingService = AudiobookStoreService.buildCaching();
         final AudiobookStoreService service = cachingService.getService();
         auth.ensureAuthGuid(service);

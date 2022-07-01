@@ -22,6 +22,7 @@ import org.rickosborne.romance.db.json.JsonStoreFactory;
 import org.rickosborne.romance.db.model.ModelSchema;
 import org.rickosborne.romance.sheet.AdapterFactory;
 import org.rickosborne.romance.sheet.ModelSheetAdapter;
+import org.rickosborne.romance.util.StringStuff;
 import picocli.CommandLine;
 
 import java.io.File;
@@ -61,7 +62,7 @@ public class DataFromSheetCommand implements Callable<Integer> {
     @CommandLine.Option(names = {"--userid", "-u"}, description = "Google User ID/email", required = true)
     private String userId;
 
-    @SuppressWarnings("FieldMayBeFinal")
+    @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
     @CommandLine.Option(names = {"--write", "-w"}, description = "Write changes back to the spreadsheet")
     private boolean write = false;
 
@@ -164,18 +165,23 @@ public class DataFromSheetCommand implements Callable<Integer> {
                             .setColumnIndex(colNum)
                             .setRowIndex(rowNum)
                             .setSheetId(sheet.getProperties().getSheetId());
+                        final ExtendedValue extendedValue = new ExtendedValue();
+                        if (StringStuff.isNumeric(value)) {
+                            extendedValue.setNumberValue(Double.parseDouble(value));
+                        } else if (StringStuff.isBoolean(value)) {
+                            extendedValue.setBoolValue(Boolean.parseBoolean(value));
+                        } else {
+                            extendedValue.setStringValue(value);
+                        }
                         final Request request = new Request().setUpdateCells(
                             new UpdateCellsRequest()
                                 .setStart(coord)
                                 .setFields("userEnteredValue")
                                 .setRows(List.of(
                                     new RowData().setValues(List.of(
-                                            new CellData()
-                                                .setUserEnteredValue(new ExtendedValue().setStringValue(value))
-                                        )
+                                        new CellData().setUserEnteredValue(extendedValue)
                                     ))
-                                )
-
+                                ))
                         );
                         request.setFactory(GsonFactory.getDefaultInstance());
                         changeRequests.add(request);

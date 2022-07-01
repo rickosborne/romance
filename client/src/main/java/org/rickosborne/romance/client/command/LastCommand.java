@@ -76,7 +76,7 @@ public class LastCommand implements Callable<Integer> {
         if (effectiveSpec == null) {
             throw new IllegalArgumentException("Bad spec: " + spec);
         }
-        final AudiobookStoreHtml audiobookStoreHtml = new AudiobookStoreHtml(cachePath);
+        final AudiobookStoreHtml audiobookStoreHtml = new AudiobookStoreHtml(cachePath, null);
         final GoodreadsHtml goodreadsHtml = new GoodreadsHtml(cachePath);
         final CacheClient<AudiobookStoreService> cachingService = AudiobookStoreService.buildCaching();
         final AudiobookStoreService service = cachingService.getService();

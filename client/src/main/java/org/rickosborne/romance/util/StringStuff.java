@@ -6,10 +6,14 @@ import org.apache.commons.codec.digest.DigestUtils;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.regex.Pattern;
 
 public class StringStuff {
     public static final String CRLF = "\n";
     public static final String[] FRACTIONS = new String[]{"", "¼", "½", "¾"};
+    public static final Pattern BOOLEAN = Pattern.compile("^(?:true|false)$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern NUMERIC = Pattern.compile("^[\\d,]+(?:\\.\\d*)?$");
 
     public static String cacheName(@NonNull final URL url) {
         return String.join("-",
@@ -17,6 +21,14 @@ public class StringStuff {
             url.getHost().replace("www.", ""),
             url.getPath().replaceAll("\\W+", "-")
         );
+    }
+
+    public static boolean isBoolean(final String s) {
+        return s != null && BOOLEAN.matcher(s).matches();
+    }
+
+    public static boolean isNumeric(final String s) {
+        return s != null && NUMERIC.matcher(s).matches();
     }
 
     public static boolean nonBlank(final String t) {
@@ -48,6 +60,13 @@ public class StringStuff {
             return null;
         }
         return LocalDate.parse(s);
+    }
+
+    public static LocalDate toLocalDateFromMDY(final String s) {
+        if (s == null || s.isBlank()) {
+            return null;
+        }
+        return LocalDate.parse(s, DateTimeFormatter.ofPattern("M/d/y"));
     }
 
     public static String ucFirst(final String text) {
