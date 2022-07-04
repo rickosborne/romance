@@ -12,7 +12,6 @@ import org.rickosborne.romance.db.DbJsonWriter;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.util.StringStuff;
 
-import java.net.HttpCookie;
 import java.net.URL;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -23,13 +22,15 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
+import static org.rickosborne.romance.util.MathStuff.doubleFromDuration;
+
 @RequiredArgsConstructor
 public class AudiobookStoreHtml {
+    public static final int DELAY_MS = 5000;
     public static final Duration MY_LIBRARY_EXPIRY = Duration.ofHours(1L);
+    public static final URL MY_LIBRARY_URL = StringStuff.urlFromString("https://audiobookstore.com/my-library.aspx");
     private final Path cachePath;
     private final JsonCookieStore cookieStore;
-    public static final URL MY_LIBRARY_URL = StringStuff.urlFromString("https://audiobookstore.com/my-library.aspx");
-    public static final int DELAY_MS = 5000;
 
     public BookModel getBookModel(@NonNull final AudiobookStoreSuggestion suggestion) {
         final URL url = suggestion.getUrl();
@@ -77,9 +78,15 @@ public class AudiobookStoreHtml {
                 final String label = detail.selectOne(".titledetail-label").getOwnText();
                 final String value = detail.selectOne(".titledetail-value").getOwnText();
                 switch (label) {
-                    case "Title:": bookBuilder.title(value); break;
-                    case "Author:": bookBuilder.authorName(value); break;
-                    case "Reader:": bookBuilder.narratorName(value); break;
+                    case "Title:":
+                        bookBuilder.title(value);
+                        break;
+                    case "Author:":
+                        bookBuilder.authorName(value);
+                        break;
+                    case "Reader:":
+                        bookBuilder.narratorName(value);
+                        break;
                     case "Run time:":
                         final Duration duration = Duration.parse(detail.selectOne("time[itemprop=timeRequired]").getAttr("datetime"));
                         bookBuilder.durationHours(duration.toMinutes() / 60d);
@@ -100,7 +107,7 @@ public class AudiobookStoreHtml {
         AuthorName("/mainEntity/author/name", BookModel::setAuthorName),
         NarratorName("/mainEntity/readBy/name", BookModel::setNarratorName),
         DatePublished("/mainEntity/datePublished", (b, d) -> b.setDatePublish(StringStuff.toLocalDate(d))),
-        Duration("/mainEntity/timeRequired", (b, t) -> b.setDurationHours(java.time.Duration.parse(t).toMinutes() / 60d)),
+        Duration("/mainEntity/timeRequired", (b, t) -> b.setDurationHours(doubleFromDuration(t))),
         Publisher("/mainEntity/publisher/name", BookModel::setPublisherName),
         Image("/mainEntity/image", (b, i) -> b.setImageUrl(StringStuff.urlFromString(i))),
         ;

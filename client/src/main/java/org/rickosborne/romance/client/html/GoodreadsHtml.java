@@ -32,6 +32,7 @@ public class GoodreadsHtml {
         "November",
         "December"
     );
+    public static final Pattern SERIES_NAME_AND_PART = Pattern.compile("\\((?<name>.+?)\\s+#(?<part>.+)\\)");
     private final Path cachePath;
 
     public BookModel getBookModel(@NonNull final URL url) {
@@ -53,7 +54,28 @@ public class GoodreadsHtml {
         pages((b, p) -> b.setPages(Integer.parseInt(p, 10)), "meta[property=books:page_count]", "content"),
         pagesDetails((b, p) -> b.setPages(Integer.parseInt(p, 10)), "#details [itemprop=numberOfPages]", s -> s.getHtml().replace(" pages", "")),
         authorName(BookModel::setAuthorName, "#bookAuthors .authorName [itemprop=name]:first-of-type", HtmlScraper::getText),
-        seriesName(BookModel::setSeriesName, "#bookSeries a", HtmlScraper::getText),
+        seriesName(BookModel::setSeriesName, "#bookSeries a", h -> {
+            final String nameAndPart = h.getText();
+            if (nameAndPart == null) {
+                return null;
+            }
+            final Matcher matcher = SERIES_NAME_AND_PART.matcher(nameAndPart);
+            if (matcher.find()) {
+                return matcher.group("name").trim();
+            }
+            return null;
+        }),
+        seriesPart(BookModel::setSeriesPart, "#bookSeries a", h -> {
+            final String nameAndPart = h.getText();
+            if (nameAndPart == null) {
+                return null;
+            }
+            final Matcher matcher = SERIES_NAME_AND_PART.matcher(nameAndPart);
+            if (matcher.find()) {
+                return matcher.group("part").trim();
+            }
+            return null;
+        }),
         narratorName(BookModel::setNarratorName, "#bookAuthors .authorName.role", s -> {
             if ("(Narrator)".equals(s.getHtml())) {
                 return s.parentHas(".authorName").selectOne("[itemprop=name]:first-of-type").getHtml();

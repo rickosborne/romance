@@ -140,6 +140,7 @@ public class DocTabbed {
         columns.add(emptyIfNull(read));
         columns.add(emptyIfNull(grUrl));
         columns.add(emptyIfNull(absUrl));
+        columns.add(""); // rick review
         columns.add(emptyIfNull(imageUrl));
         return String.join("\t", columns);
     }

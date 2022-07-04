@@ -23,7 +23,8 @@ public interface ModelSchema<M> {
         for (final SchemaAttribute<M, Object> attribute : getAttributes()) {
             final Object beforeValue = attribute.getAttribute(before);
             final Object afterValue = attribute.getAttribute(after);
-            final Object resultValue = beforeValue == null ? afterValue : beforeValue;
+            // final Object resultValue = beforeValue == null ? afterValue : beforeValue;
+            final Object resultValue = attribute.chooseAttributeValue(beforeValue, afterValue);
             if (resultValue == null) {
                 continue;
             }

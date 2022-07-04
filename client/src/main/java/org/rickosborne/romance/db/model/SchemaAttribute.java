@@ -3,6 +3,14 @@ package org.rickosborne.romance.db.model;
 import lombok.NonNull;
 
 public interface SchemaAttribute<M, A> {
+    default A chooseAttributeValue(final A left, final A right) {
+        if (right == null) {
+            return left;
+        } else {
+            return right;
+        }
+    }
+
     A getAttribute(@NonNull final M model);
 
     String getAttributeName();

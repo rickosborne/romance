@@ -149,8 +149,9 @@ public class DataFromSheetCommand implements Callable<Integer> {
                 }
             });
             final M existing = jsonStore.findLikeFromCache(record);
-            if (write && existing != null) {
-                final Map<String, String> changes = sheetAdapter.findChangesToSheet(record, existing);
+            final M updated = modelSchema.mergeModels(existing, record);
+            if (existing != null) {
+                final Map<String, String> changes = sheetAdapter.findChangesToSheet(record, updated);
                 if (!changes.isEmpty()) {
                     System.out.println("~~~ " + jsonStore.idFromModel(existing));
 //                    System.out.println(changes);
@@ -189,9 +190,9 @@ public class DataFromSheetCommand implements Callable<Integer> {
                     }
                 }
             }
-            jsonStore.saveIfChanged(modelSchema.mergeModels(existing, record));
+            jsonStore.saveIfChanged(updated);
         }
-        if (!changeRequests.isEmpty()) {
+        if (write && !changeRequests.isEmpty()) {
             final BatchUpdateSpreadsheetRequest updateSpreadsheetRequest = new BatchUpdateSpreadsheetRequest()
                 .setRequests(changeRequests);
             try {

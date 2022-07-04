@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
@@ -22,7 +23,7 @@ public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
     feelOther(BookModel::getFeelOther, BookModel::setFeelOther, String.class),
     genre(BookModel::getGenre, BookModel::setGenre, String.class),
     goodreadsUrl(BookModel::getGoodreadsUrl, BookModel::setGoodreadsUrl, URL.class),
-    imageUrl(BookModel::getImageUrl, BookModel::setImageUrl, URL.class),
+    imageUrl(BookModel::getImageUrl, BookModel::setImageUrl, URL.class, (a, b) -> a.getPath().contains("tabs.web.media") ? a : b),
     isbn(BookModel::getIsbn, BookModel::setIsbn, String.class),
     hea(BookModel::getHea, BookModel::setHea, String.class),
     like(BookModel::getLike, BookModel::setLike, String.class),
@@ -52,14 +53,34 @@ public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
     ;
 
     private final Function<BookModel, ?> accessor;
+    private final BiFunction<Object, Object, Object> attributeChooser;
     private final Class<?> attributeType;
     private final BiConsumer<BookModel, Object> mutator;
 
     <T> BookAttributes(final Function<BookModel, T> accessor, final BiConsumer<BookModel, T> mutator, final Class<T> attributeType) {
+        this(accessor, mutator, attributeType, null);
+    }
+
+    <T> BookAttributes(
+        final Function<BookModel, T> accessor,
+        final BiConsumer<BookModel, T> mutator,
+        final Class<T> attributeType,
+        final BiFunction<T, T, T> attributeChooser
+    ) {
         this.accessor = accessor;
         @SuppressWarnings("unchecked") final BiConsumer<BookModel, Object> typedMutator = (BiConsumer<BookModel, Object>) mutator;
         this.mutator = typedMutator;
         this.attributeType = attributeType;
+        @SuppressWarnings("unchecked") final BiFunction<Object, Object, Object> typedChooser = (BiFunction<Object, Object, Object>) attributeChooser;
+        this.attributeChooser = typedChooser;
+    }
+
+    @Override
+    public Object chooseAttributeValue(final Object left, final Object right) {
+        if (attributeChooser == null || left == null || right == null) {
+            return SchemaAttribute.super.chooseAttributeValue(left, right);
+        }
+        return attributeChooser.apply(left, right);
     }
 
     public Object getAttribute(@NonNull final BookModel model) {
@@ -89,7 +110,9 @@ public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
         if ((value != null) && !attributeType.isInstance(value)) {
             throw new IllegalArgumentException(String.format("Expected %s but found %s", attributeType.getSimpleName(), value.getClass().getSimpleName()));
         }
-        mutator.accept(model, value);
+        final Object beforeValue = getAttribute(model);
+        final Object afterValue = chooseAttributeValue(beforeValue, value);
+        mutator.accept(model, afterValue);
     }
 
 }
