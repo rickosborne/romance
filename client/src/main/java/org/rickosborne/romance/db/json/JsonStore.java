@@ -1,4 +1,4 @@
-package org.rickosborne.romance.db;
+package org.rickosborne.romance.db.json;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,6 +9,9 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
 import org.rickosborne.romance.NamingConvention;
+import org.rickosborne.romance.db.DbJsonWriter;
+import org.rickosborne.romance.db.DbModel;
+import org.rickosborne.romance.db.ModelStore;
 import org.rickosborne.romance.db.model.ModelSchema;
 
 import java.io.File;

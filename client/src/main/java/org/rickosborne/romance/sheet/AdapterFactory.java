@@ -28,12 +28,13 @@ public class AdapterFactory {
         "Watchlist", WatchModel.class
     );
 
-    public ModelSheetAdapter<?> adapterByName(@NonNull final String tabTitle) {
+    public <M> ModelSheetAdapter<M> adapterByName(@NonNull final String tabTitle) {
         final Class<?> modelType = MODEL_BY_TITLE.get(tabTitle);
         if (modelType == null) {
             throw new IllegalArgumentException("Unknown tab/model: " + tabTitle);
         }
-        return adapterForType(modelType);
+        @SuppressWarnings("unchecked") final ModelSheetAdapter<M> typed = (ModelSheetAdapter<M>) adapterForType(modelType);
+        return typed;
     }
 
     public <M> ModelSheetAdapter<M> adapterForType(@NonNull final Class<M> type) {

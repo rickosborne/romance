@@ -3,7 +3,6 @@ package org.rickosborne.romance.db.json;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import org.rickosborne.romance.NamingConvention;
-import org.rickosborne.romance.db.JsonStore;
 import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.model.NarratorModel;

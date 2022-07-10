@@ -17,11 +17,14 @@ import lombok.extern.java.Log;
 import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
-import org.rickosborne.romance.db.JsonStore;
+import org.rickosborne.romance.db.json.JsonStore;
 import org.rickosborne.romance.db.json.JsonStoreFactory;
 import org.rickosborne.romance.db.model.ModelSchema;
+import org.rickosborne.romance.db.sheet.SheetStore;
+import org.rickosborne.romance.db.sheet.SheetStoreFactory;
 import org.rickosborne.romance.sheet.AdapterFactory;
 import org.rickosborne.romance.sheet.ModelSheetAdapter;
+import org.rickosborne.romance.util.SheetStuff;
 import org.rickosborne.romance.util.StringStuff;
 import picocli.CommandLine;
 
@@ -35,9 +38,8 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
-import static org.rickosborne.romance.util.StringStuff.stringify;
+import static org.rickosborne.romance.util.SheetStuff.getColumnKeys;
 
 @Log
 @CommandLine.Command(
@@ -45,12 +47,7 @@ import static org.rickosborne.romance.util.StringStuff.stringify;
     description = "Pull and materialize the Sheet data to JSON files"
 )
 public class DataFromSheetCommand implements Callable<Integer> {
-    public static final List<String> DATA_TAB_TITLES = Stream.of(DbModel.values())
-        .map(DbModel::getTabTitle)
-        .collect(Collectors.toList());
-
     private final AdapterFactory adapterFactory = new AdapterFactory();
-
     @SuppressWarnings("unused")
     @Getter
     @CommandLine.Option(names = {"--path", "-p"}, description = "Path to DB dir", defaultValue = "book-data")
@@ -58,6 +55,7 @@ public class DataFromSheetCommand implements Callable<Integer> {
     private JsonStoreFactory jsonStoreFactory;
     @Getter
     private final NamingConvention namingConvention = new NamingConvention();
+    private SheetStoreFactory sheetStoreFactory;
     @SuppressWarnings("unused")
     @CommandLine.Option(names = {"--userid", "-u"}, description = "Google User ID/email", required = true)
     private String userId;
@@ -78,76 +76,38 @@ public class DataFromSheetCommand implements Callable<Integer> {
         final Sheets.Spreadsheets spreadsheets = BooksSheets.getSpreadsheets(userId);
         final Spreadsheet spreadsheet = BooksSheets.getSpreadsheet(spreadsheets);
         jsonStoreFactory = new JsonStoreFactory(getDbPath(), getNamingConvention());
-        //noinspection CodeBlock2Expr
-        DATA_TAB_TITLES.forEach(tabTitle -> {
-            pullTab(tabTitle, spreadsheet, spreadsheets, adapterFactory.adapterByName(tabTitle));
-        });
+        sheetStoreFactory = new SheetStoreFactory(namingConvention, userId);
+        for (final DbModel dbModel : DbModel.values()) {
+            pullTab(dbModel, spreadsheet, spreadsheets);
+        }
         System.out.println("data-from-sheet -p " + dbPath);
         return null;
     }
 
-    private String[] getColumnKeys(
-        final List<List<Object>> rows,
-        final int frozenRowCount,
-        final int colCount,
-        final NamingConvention namingConvention
-    ) {
-        final String[] colKeys = new String[colCount];
-        final String[] lastInRow = new String[frozenRowCount];
-        for (int colNum = 0; colNum < colCount; colNum++) {
-            for (int rowNum = 0; rowNum < frozenRowCount; rowNum++) {
-                final List<Object> row = rows.get(rowNum);
-                if (row.size() <= colNum) {
-                    continue;
-                }
-                final String cellValue = stringify(row.get(colNum));
-                if (cellValue == null || cellValue.isBlank()) {
-                    //noinspection UnnecessaryContinue
-                    continue;
-                } else {
-                    lastInRow[rowNum] = cellValue;
-                }
-            }
-            colKeys[colNum] = namingConvention.fieldNameFromTexts(lastInRow);
-        }
-        return colKeys;
-    }
-
     private <M> void pullTab(
-        final String tabTitle,
+        final DbModel dbModel,
         final Spreadsheet spreadsheet,
-        final Sheets.Spreadsheets spreadsheets,
-        final ModelSheetAdapter<M> sheetAdapter
+        final Sheets.Spreadsheets spreadsheets
     ) {
+        final String tabTitle = dbModel.getTabTitle();
         final Sheet sheet = BooksSheets.sheetTitled(tabTitle, spreadsheet);
         final List<List<Object>> rows = BooksSheets.sheetValues(tabTitle, spreadsheets);
         final GridProperties gridProperties = sheet.getProperties().getGridProperties();
+        final ModelSheetAdapter<M> sheetAdapter = adapterFactory.adapterByName(dbModel.getTabTitle());
         final Class<M> modelType = sheetAdapter.getModelType();
         final JsonStore<M> jsonStore = jsonStoreFactory.buildJsonStore(modelType);
+        final SheetStore<M> sheetStore = sheetStoreFactory.buildSheetStore(modelType);
         final ModelSchema<M> modelSchema = jsonStore.getModelSchema();
         final int frozenRowCount = Optional.ofNullable(gridProperties.getFrozenRowCount()).orElse(0);
         final int colCount = Optional.ofNullable(gridProperties.getColumnCount()).orElse(0);
         final NamingConvention namingConvention = new NamingConvention();
-
-        if (frozenRowCount == 0 || colCount == 0) {
-            return;
-        }
         final String[] colKeys = getColumnKeys(rows, frozenRowCount, colCount, namingConvention);
         final Map<String, Integer> colNums = IntStream.range(0, colKeys.length).boxed().collect(Collectors.toMap(i -> colKeys[i], i -> i));
         System.out.println(tabTitle + ": " + String.join(", ", colKeys));
         final List<Request> changeRequests = new LinkedList<>();
-        for (int rowNum = frozenRowCount; rowNum < rows.size(); rowNum++) {
-            final List<Object> row = rows.get(rowNum);
-            if (row == null || row.isEmpty()) {
-                continue;
-            }
-            final M record = sheetAdapter.withNewModel((ma, model) -> {
-                for (int colNum = 0; colNum < row.size(); colNum++) {
-                    final String colKey = colKeys[colNum];
-                    final Object cellValue = row.get(colNum);
-                    ma.setKeyValue(model, colKey, cellValue);
-                }
-            });
+        for (final SheetStuff.Indexed<M> indexed : sheetStore.getRecords()) {
+            final int rowNum = indexed.getRowNum();
+            final M record = indexed.getModel();
             final M existing = jsonStore.findLikeFromCache(record);
             final M updated = modelSchema.mergeModels(existing, record);
             if (existing != null) {
