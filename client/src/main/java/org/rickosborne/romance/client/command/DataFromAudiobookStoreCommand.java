@@ -7,9 +7,7 @@ import org.rickosborne.romance.client.CacheClient;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.client.response.BookInformation;
 import org.rickosborne.romance.client.response.UserInformation2;
-import org.rickosborne.romance.db.Diff;
-import org.rickosborne.romance.db.SchemaDiff;
-import org.rickosborne.romance.db.json.BookJsonStore;
+import org.rickosborne.romance.db.json.JsonStore;
 import org.rickosborne.romance.db.json.JsonStoreFactory;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.model.BookSchema;
@@ -63,7 +61,7 @@ public class DataFromAudiobookStoreCommand implements Callable<Integer> {
         }
         final String userGuid = Optional.ofNullable(auth.getAbsUserGuid()).map(UUID::toString).orElse(null);
         jsonStoreFactory = new JsonStoreFactory(dbPath, namingConvention);
-        final BookJsonStore bookStore = jsonStoreFactory.buildJsonStore(BookModel.class);
+        final JsonStore<BookModel> bookStore = jsonStoreFactory.buildJsonStore(BookModel.class);
         for (final BookInformation book : books) {
             BookModel model = modelFromBookInformation(book);
             final BookModel existing = bookStore.findLikeOrMatch(model, bm -> Objects.equals(bm.getTitle(), book.getCleanTitle()) && Objects.equals(bm.getAuthorName(), book.getAuthors()));

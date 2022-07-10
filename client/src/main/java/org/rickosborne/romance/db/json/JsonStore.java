@@ -24,7 +24,7 @@ import java.util.stream.Stream;
 @Log
 @Getter(value = AccessLevel.PROTECTED)
 @RequiredArgsConstructor
-public abstract class JsonStore<M> implements ModelStore<M> {
+public class JsonStore<M> implements ModelStore<M> {
     public static final String FILE_EXT = ".json";
     @Getter
     private final DbModel dbModel;

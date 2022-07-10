@@ -16,7 +16,7 @@ import org.rickosborne.romance.client.response.AudiobookStoreSuggestion;
 import org.rickosborne.romance.client.response.BookInformation;
 import org.rickosborne.romance.client.response.GoodreadsAutoComplete;
 import org.rickosborne.romance.client.response.UserInformation2;
-import org.rickosborne.romance.db.json.BookJsonStore;
+import org.rickosborne.romance.db.json.JsonStore;
 import org.rickosborne.romance.db.json.JsonStoreFactory;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.model.BookSchema;
@@ -96,7 +96,7 @@ public class LastCommand implements Callable<Integer> {
         final GoodreadsService gr = GoodreadsService.build();
         final AudiobookStoreSuggestService suggestService = AudiobookStoreSuggestService.build();
         jsonStoreFactory = new JsonStoreFactory(dbPath, namingConvention);
-        final BookJsonStore bookStore = jsonStoreFactory.buildJsonStore(BookModel.class);
+        final JsonStore<BookModel> bookStore = jsonStoreFactory.buildJsonStore(BookModel.class);
         final StringBuilder sb = new StringBuilder();
         lastBooks
             .forEach(book -> {

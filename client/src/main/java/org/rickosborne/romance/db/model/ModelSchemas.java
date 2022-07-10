@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 public enum ModelSchemas {
@@ -14,6 +15,16 @@ public enum ModelSchemas {
     TagModelSchema(TagModel.class, TagSchema::new, TagAttributes.class),
     WatchModelSchema(WatchModel.class, WatchSchema::new, WatchAttributes.class),
     ;
+
+    @SuppressWarnings("unchecked")
+    public static <M> ModelSchema<M> schemaForModelType(final Class<M> modelType) {
+        return (ModelSchema<M>) Stream.of(values())
+            .filter(ms -> modelType == ms.modelClass)
+            .map(ModelSchemas::getModelSchema)
+            .findAny()
+            .orElseThrow(() -> new IllegalArgumentException("No schema for " + modelType.getSimpleName()));
+    }
+
     @Getter
     private final Class<?> modelClass;
     private final Supplier<ModelSchema<?>> schemaSupplier;

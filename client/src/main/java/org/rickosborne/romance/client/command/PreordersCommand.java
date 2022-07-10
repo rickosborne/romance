@@ -5,7 +5,7 @@ import lombok.extern.java.Log;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.client.JsonCookieStore;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
-import org.rickosborne.romance.db.json.BookJsonStore;
+import org.rickosborne.romance.db.json.JsonStore;
 import org.rickosborne.romance.db.json.JsonStoreFactory;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.model.BookSchema;
@@ -48,7 +48,7 @@ public class PreordersCommand implements Callable<Integer> {
         final AudiobookStoreHtml storeHtml = new AudiobookStoreHtml(cachePath, cookieStore);
         final List<BookModel> preorders = storeHtml.getPreorders();
         final JsonStoreFactory jsonStoreFactory = new JsonStoreFactory(dbPath, namingConvention);
-        final BookJsonStore bookStore = jsonStoreFactory.buildJsonStore(BookModel.class);
+        final JsonStore<BookModel> bookStore = jsonStoreFactory.buildJsonStore(BookModel.class);
         if (preorders.isEmpty()) {
             System.out.println("(no preorders)");
             return 0;
