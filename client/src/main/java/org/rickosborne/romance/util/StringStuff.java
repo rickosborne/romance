@@ -10,10 +10,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.regex.Pattern;
 
 public class StringStuff {
+    public static final Pattern BOOLEAN = Pattern.compile("^(?:true|false)$", Pattern.CASE_INSENSITIVE);
     public static final String CRLF = "\n";
     public static final String[] FRACTIONS = new String[]{"", "¼", "½", "¾"};
-    public static final Pattern BOOLEAN = Pattern.compile("^(?:true|false)$", Pattern.CASE_INSENSITIVE);
     public static final Pattern NUMERIC = Pattern.compile("^[\\d,]+(?:\\.\\d*)?$");
+    public static final int FILE_NAME_MAX_LENGTH = 150;
 
     public static String cacheName(@NonNull final URL url) {
         return String.join("-",
@@ -29,6 +30,10 @@ public class StringStuff {
 
     public static boolean isNumeric(final String s) {
         return s != null && NUMERIC.matcher(s).matches();
+    }
+
+    public static String noLongerThan(final int maxLength, final String s) {
+        return s == null || s.length() <= maxLength ? s : s.substring(0, maxLength);
     }
 
     public static boolean nonBlank(final String t) {

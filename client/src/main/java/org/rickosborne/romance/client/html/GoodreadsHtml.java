@@ -2,6 +2,7 @@ package org.rickosborne.romance.client.html;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.java.Log;
 import org.rickosborne.romance.client.command.HtmlScraper;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.util.StringStuff;
@@ -14,6 +15,7 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Log
 @RequiredArgsConstructor
 public class GoodreadsHtml {
     public static final int DELAY_MS = 5000;
@@ -120,9 +122,13 @@ public class GoodreadsHtml {
 
         public void findAndSet(@NonNull final BookModel book, @NonNull final HtmlScraper scraper) {
             final HtmlScraper localScraper = scraper.selectOne(selector);
-            final String text = stringifier.apply(localScraper);
-            if (text != null && !text.isBlank()) {
-                setter.accept(book, text);
+            try {
+                final String text = stringifier.apply(localScraper);
+                if (text != null && !text.isBlank()) {
+                    setter.accept(book, text);
+                }
+            } catch (final NullPointerException e) {
+                log.warning("NPE while parsing GR BookPage: " + this.name());
             }
         }
     }

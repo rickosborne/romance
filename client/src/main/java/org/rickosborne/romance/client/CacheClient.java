@@ -15,6 +15,9 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.rickosborne.romance.util.StringStuff.FILE_NAME_MAX_LENGTH;
+import static org.rickosborne.romance.util.StringStuff.noLongerThan;
+
 public class CacheClient<S> {
     public static String encodeCacheKey(final String key) {
         // return Base64.getMimeEncoder().encodeToString(key.getBytes()).replaceAll("=+$", "");
@@ -26,7 +29,7 @@ public class CacheClient<S> {
             matcher.appendReplacement(sb, encoder.encodeToString(matcher.group().getBytes()));
         }
         matcher.appendTail(sb);
-        return sb.toString();
+        return noLongerThan(FILE_NAME_MAX_LENGTH, sb.toString());
     }
 
     @NonNull

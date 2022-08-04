@@ -16,6 +16,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.rickosborne.romance.util.StreamStuff.firstOrElse;
+import static org.rickosborne.romance.util.StringStuff.FILE_NAME_MAX_LENGTH;
+import static org.rickosborne.romance.util.StringStuff.noLongerThan;
 
 public class NamingConvention {
     private final Map<String, String> replacements = readReplacements();
@@ -35,12 +37,12 @@ public class NamingConvention {
     }
 
     public String fileNameFromTexts(@NonNull final Stream<String> parts) {
-        return parts
+        return noLongerThan(FILE_NAME_MAX_LENGTH, parts
             .filter(StringStuff::nonBlank)
             .map(String::trim)
             .map(String::toLowerCase)
             .map(s -> s.replaceAll("['\"`]+", "").replaceAll("[^\\da-z]+", "-"))
-            .collect(Collectors.joining("-"));
+            .collect(Collectors.joining("-")));
     }
 
     public String formatText(@NonNull final String text) {
