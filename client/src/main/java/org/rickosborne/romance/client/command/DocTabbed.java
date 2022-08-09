@@ -68,6 +68,7 @@ public class DocTabbed {
             .absUrl(book.getAudiobookStoreUrl())
             .grUrl(book.getGoodreadsUrl())
             .imageUrl(book.getImageUrl())
+            .isbn(book.getIsbn())
             .pages(book.getPages())
             .published(Optional.ofNullable(book.getDatePublish()).map(d -> d.atStartOfDay().toInstant(ZoneOffset.UTC)).orElse(null))
             .publisher(book.getPublisherName())
@@ -98,6 +99,7 @@ public class DocTabbed {
     private final URL grUrl;
     private final Double hours;
     private final URL imageUrl;
+    private final String isbn;
     private final String narrator;
     private final Integer pages;
     private final Instant published;
@@ -115,6 +117,7 @@ public class DocTabbed {
             .author(coalesce(author, other.author))
             .grUrl(coalesce(grUrl, other.grUrl))
             .imageUrl(coalesce(imageUrl, other.imageUrl))
+            .isbn(coalesce(isbn, other.isbn))
             .hours(coalesce(hours, other.hours))
             .narrator(coalesce(narrator, other.narrator))
             .pages(coalesce(pages, other.pages))
@@ -142,6 +145,7 @@ public class DocTabbed {
         columns.add(emptyIfNull(absUrl));
         columns.add(""); // rick review
         columns.add(emptyIfNull(imageUrl));
+        columns.add(emptyIfNull(isbn));
         return String.join("\t", columns);
     }
 }
