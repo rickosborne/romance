@@ -5,7 +5,7 @@ import java.util.Set;
 public enum YesNoUnknown {
     Yes("Y", "YES"),
     No("N", "NO"),
-    Unknown("?"),
+    Unknown("?", "N?"),
     ;
 
     public static YesNoUnknown fromString(final String s) {

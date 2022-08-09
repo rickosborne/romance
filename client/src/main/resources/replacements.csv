@@ -1,6 +1,6 @@
 Duration (h),durationHours
-Character 1,mc1
-Character 2,mc2
+Character 1,
+Character 2,
 How did it make me feel?,feel
 tagsTag1,tag1
 tagsTag2,tag2
@@ -26,3 +26,19 @@ scoreDurationplusminus,scoreDurationPlusMinus
 Generated,gen
 average,
 MD Link+,mdLinkPlus
+Mc1Name,mc1Name
+Mc1Gender,mc1Gender
+Mc1Pronouns,mc1Pronouns
+Mc1Age,mc1Age
+Mc1Profession,mc1Profession
+Mc1Attachment,mc1Attachment
+Mc2Name,mc2Name
+Mc2Gender,mc2Gender
+Mc2Pronouns,mc2Pronouns
+Mc2Age,mc2Age
+Mc2Profession,mc2Profession
+Mc2Attachment,mc2Attachment
+seriesSeriesName,seriesName
+seriesSeriesPart,seriesPart
+rateHeaRating,rateHea
+linkIsbn,isbn

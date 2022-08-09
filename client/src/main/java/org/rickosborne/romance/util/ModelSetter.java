@@ -86,7 +86,7 @@ public interface ModelSetter<M> {
         return (m, v) -> {
             if (v instanceof String) {
                 final String s = (String) v;
-                if (s.isBlank()) {
+                if (s.isBlank() || "null".equals(s)) {
                     setter.accept(m, null);
                 } else {
                     setter.accept(m, s);

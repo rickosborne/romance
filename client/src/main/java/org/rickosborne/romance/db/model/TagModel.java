@@ -15,6 +15,7 @@ import java.util.TreeMap;
 @JsonIgnoreProperties({"stars"})
 public class TagModel {
     private String description;
+    private Double effectiveLike;
     private String name;
     private Integer ownedCount;
     private Double positiveDurationHours;

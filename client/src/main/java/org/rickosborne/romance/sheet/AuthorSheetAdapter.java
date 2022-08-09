@@ -37,11 +37,13 @@ public class AuthorSheetAdapter implements ModelSheetAdapter<AuthorModel> {
         setters.put("rateVibe", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.Vibe, r))));
         setters.put("rateHea", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.HEA, r))));
         setters.put("rateOverall", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.Overall, r))));
+        setters.put("rateDnfCount", intSetter(AuthorModel::setDnfCount));
         setters.put("rate4", intSetter(AuthorModel::setFourStarPlusCount));
         setters.put("rate5", intSetter(AuthorModel::setFiveStarCount));
         setters.put("rateMin", doubleSetter(AuthorModel::setMinRating));
         setters.put("rateMax", doubleSetter(AuthorModel::setMaxRating));
         setters.put("rateRange", ModelSetter::setNothing);
+        setters.put("rateOdds4", doubleSetter(AuthorModel::setOdds4));
         setters.put("statsAvgPages", doubleSetter(AuthorModel::setMeanPages));
         setters.put("statsAvgDuration", doubleSetter(AuthorModel::setMeanDurationHours));
         setters.put("statsStars", stringSetter(AuthorModel::setStars));

@@ -5,6 +5,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.regex.Pattern;
@@ -13,6 +14,7 @@ public class StringStuff {
     public static final Pattern BOOLEAN = Pattern.compile("^(?:true|false)$", Pattern.CASE_INSENSITIVE);
     public static final String CRLF = "\n";
     public static final String[] FRACTIONS = new String[]{"", "¼", "½", "¾"};
+    public static final Pattern ISO_DATE = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
     public static final Pattern NUMERIC = Pattern.compile("^[\\d,]+(?:\\.\\d*)?$");
     public static final int FILE_NAME_MAX_LENGTH = 150;
 
@@ -26,6 +28,10 @@ public class StringStuff {
 
     public static boolean isBoolean(final String s) {
         return s != null && BOOLEAN.matcher(s).matches();
+    }
+
+    public static boolean isDate(final String s) {
+        return s != null && ISO_DATE.matcher(s).matches();
     }
 
     public static boolean isNumeric(final String s) {

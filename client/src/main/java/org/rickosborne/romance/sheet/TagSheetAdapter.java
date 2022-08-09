@@ -30,6 +30,7 @@ public class TagSheetAdapter implements ModelSheetAdapter<TagModel> {
         setters.put("calcSumDurationPlusMinus", ModelSetter::setNothing);
         setters.put("calcPositiveDuration", doubleSetter(TagModel::setPositiveDurationHours));
         setters.put("calcLikelihoodOfPositive", doubleSetter(TagModel::setPositiveLikelihood));
+        setters.put("calcEffectiveLike", doubleSetter(TagModel::setEffectiveLike));
     }
 
     @Override

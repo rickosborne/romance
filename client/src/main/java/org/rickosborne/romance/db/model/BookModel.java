@@ -27,6 +27,7 @@ public class BookModel {
 
     private URL audiobookStoreUrl;
     private String authorName;
+    private String breakup;
     private LocalDate datePublish;
     private LocalDate datePurchase;
     private LocalDate dateRead;

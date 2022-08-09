@@ -13,6 +13,7 @@ import java.util.function.Function;
 public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
     audiobookStoreUrl(BookModel::getAudiobookStoreUrl, BookModel::setAudiobookStoreUrl, URL.class),
     authorName(BookModel::getAuthorName, BookModel::setAuthorName, String.class),
+    breakup(BookModel::getBreakup, BookModel::setBreakup, String.class),
     datePublish(BookModel::getDatePublish, BookModel::setDatePublish, LocalDate.class),
     datePurchase(BookModel::getDatePurchase, BookModel::setDatePurchase, LocalDate.class),
     dateRead(BookModel::getDateRead, BookModel::setDateRead, LocalDate.class),

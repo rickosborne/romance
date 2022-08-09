@@ -16,6 +16,7 @@ import java.util.function.Function;
 @Data
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class AuthorModel {
+    private Integer dnfCount;
     private Integer fiveStarCount;
     private Integer fourStarPlusCount;
     private URL goodreadsUrl;
@@ -24,6 +25,7 @@ public class AuthorModel {
     private Double meanPages;
     private Double minRating;
     private String name;
+    private Double odds4;
     private Integer ownedCount;
     private String pronouns;
     private YesNoUnknown queer;

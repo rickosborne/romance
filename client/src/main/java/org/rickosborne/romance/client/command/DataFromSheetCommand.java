@@ -1,5 +1,6 @@
 package org.rickosborne.romance.client.command;
 
+import com.fasterxml.jackson.databind.deser.std.DateDeserializers;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
@@ -31,11 +32,14 @@ import picocli.CommandLine;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.Month;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -64,6 +68,11 @@ public class DataFromSheetCommand implements Callable<Integer> {
     @CommandLine.Option(names = {"--write", "-w"}, description = "Write changes back to the spreadsheet")
     private boolean write = false;
 
+    private final Map<String, Function<String, Object>> coerceFieldFunctions = Map.of(
+        "isbn", s -> s
+    );
+    private static final LocalDate EXCEL_EPOCH = LocalDate.of(1899, Month.DECEMBER, 30);
+
     @Override
     public Integer call() {
         final File dbFile = dbPath.toFile();
@@ -82,6 +91,21 @@ public class DataFromSheetCommand implements Callable<Integer> {
         }
         System.out.println("data-from-sheet -p " + dbPath);
         return null;
+    }
+
+    private Object coerceCellValue(final String fieldName, final String text) {
+        final Function<String, Object> coercion = coerceFieldFunctions.get(fieldName);
+        if (coercion != null) {
+            return coercion.apply(text);
+        }
+        if (StringStuff.isNumeric(text)) {
+            return Double.parseDouble(text);
+        } else if (StringStuff.isBoolean(text)) {
+            return Boolean.parseBoolean(text);
+        } else if (StringStuff.isDate(text)) {
+            return LocalDate.parse(text);
+        }
+        return text;
     }
 
     private <M> void pullTab(
@@ -114,7 +138,7 @@ public class DataFromSheetCommand implements Callable<Integer> {
                 final Map<String, String> changes = sheetAdapter.findChangesToSheet(record, updated);
                 if (!changes.isEmpty()) {
                     System.out.println("~~~ " + jsonStore.idFromModel(existing));
-//                    System.out.println(changes);
+                    System.out.println(changes);
                     for (final Map.Entry<String, String> entry : changes.entrySet()) {
                         final String fieldName = entry.getKey();
                         final String value = entry.getValue();
@@ -127,10 +151,13 @@ public class DataFromSheetCommand implements Callable<Integer> {
                             .setRowIndex(rowNum)
                             .setSheetId(sheet.getProperties().getSheetId());
                         final ExtendedValue extendedValue = new ExtendedValue();
-                        if (StringStuff.isNumeric(value)) {
-                            extendedValue.setNumberValue(Double.parseDouble(value));
-                        } else if (StringStuff.isBoolean(value)) {
-                            extendedValue.setBoolValue(Boolean.parseBoolean(value));
+                        final Object coerced = coerceCellValue(fieldName, value);
+                        if (coerced instanceof Double) {
+                            extendedValue.setNumberValue((Double) coerced);
+                        } else if (coerced instanceof Boolean) {
+                            extendedValue.setBoolValue((Boolean) coerced);
+                        } else if (coerced instanceof LocalDate) {
+                            extendedValue.setNumberValue(0d + EXCEL_EPOCH.until((LocalDate) coerced).getDays());
                         } else {
                             extendedValue.setStringValue(value);
                         }

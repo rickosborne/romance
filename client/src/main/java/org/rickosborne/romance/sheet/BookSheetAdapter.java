@@ -70,15 +70,15 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
         datePublish(BookAttributes.datePublish, true, BS.localDateSetter(BookModel::setDatePublish)),
         datePurchase(BookAttributes.datePurchase, true, BS.localDateSetter(BookModel::setDatePurchase)),
         dateRead((BookModel m, Object o) -> {
-            if (READING_SENTINEL.equals(o)) {
+            if ((o instanceof String) && ((String) o).contains(READING_SENTINEL)) {
                 m.setReading(true);
-            } else if (DNF_SENTINEL.equals(o)) {
+            } else if ((o instanceof String) && ((String) o).contains(DNF_SENTINEL)) {
                 m.setDnf(true);
             } else {
                 BS.localDateSetter(BookModel::setDateRead).accept(m, o);
             }
         }),
-        isbn(BookAttributes.isbn, false, BS.stringSetter(BookModel::setIsbn)),
+        isbn(BookAttributes.isbn, true, BS.stringSetter(BookModel::setIsbn)),
         linkGoodreads(BookAttributes.goodreadsUrl, true, BS.urlSetter(BookModel::setGoodreadsUrl)),
         linkAudiobookstore(BookAttributes.audiobookStoreUrl, true, BS.urlSetter(BookModel::setAudiobookStoreUrl)),
         linkRickReview(BookAttributes.rickReviewUrl, false, BS.urlSetter(BookModel::setRickReviewUrl)),
@@ -111,7 +111,8 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
         catLike(BookAttributes.like, false, BS.stringSetter(BookModel::setLike)),
         catSynopsis(BookAttributes.synopsis, false, BS.stringSetter(BookModel::setSynopsis)),
         catSource(BookAttributes.source, false, BS.stringSetter(BookModel::setSource)),
-        catHea(BookAttributes.hea, false, BS.stringSetter(BookModel::setHea)),
+        catBreakup(BookAttributes.breakup, false, BS.stringSetter(BookModel::setBreakup)),
+        catHeaSpoilers(BookAttributes.hea, false, BS.stringSetter(BookModel::setHea)),
         feelGoodStuff(BookAttributes.feelGood, false, BS.stringSetter(BookModel::setFeelGood)),
         feelBadStuff(BookAttributes.feelBad, false, BS.stringSetter(BookModel::setFeelBad)),
         feelOtherStuff(BookAttributes.feelOther, false, BS.stringSetter(BookModel::setFeelOther)),
@@ -136,6 +137,12 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
         scoreZeroOne(ModelSetter::setNothing),
         scorePlusMinus(ModelSetter::setNothing),
         scoreDurationPlusMinus(ModelSetter::setNothing),
+        scoreLikeAuthor(ModelSetter::setNothing),
+        scoreLikeTags(ModelSetter::setNothing),
+        scoreLikePairing(ModelSetter::setNothing),
+        scoreLikeBook(ModelSetter::setNothing),
+        scoreLikeRating(ModelSetter::setNothing),
+        scoreLikeError(ModelSetter::setNothing),
         genStars(ModelSetter::setNothing),
         genPairing(BS.stringSetter(BookModel::setPairing)),
         genNotes(ModelSetter::setNothing),
