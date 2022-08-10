@@ -4,12 +4,20 @@ import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.StaleElementReferenceException;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.rickosborne.romance.AudiobookStore;
 import org.rickosborne.romance.client.JsonCookieStore;
 import org.rickosborne.romance.client.command.HtmlScraper;
-import org.rickosborne.romance.client.response.AudiobookStoreSuggestion;
-import org.rickosborne.romance.client.response.BookInformation;
 import org.rickosborne.romance.db.DbJsonWriter;
 import org.rickosborne.romance.db.model.BookModel;
+import org.rickosborne.romance.util.BrowserStuff;
 import org.rickosborne.romance.util.StringStuff;
 
 import java.net.URL;
@@ -21,32 +29,18 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
+import static org.rickosborne.romance.AudiobookStore.DELAY_MS;
+import static org.rickosborne.romance.AudiobookStore.MY_LIBRARY_URL;
 import static org.rickosborne.romance.util.MathStuff.doubleFromDuration;
+import static org.rickosborne.romance.util.StringStuff.urlFromString;
 
 @RequiredArgsConstructor
 public class AudiobookStoreHtml {
-    public static final int DELAY_MS = 5000;
-    public static final Duration MY_LIBRARY_EXPIRY = Duration.ofHours(1L);
-    public static final URL MY_LIBRARY_URL = StringStuff.urlFromString("https://audiobookstore.com/my-library.aspx");
     private final Path cachePath;
     private final JsonCookieStore cookieStore;
-
-    public BookModel getBookModel(@NonNull final AudiobookStoreSuggestion suggestion) {
-        final URL url = suggestion.getUrl();
-        if (url == null) {
-            return null;
-        }
-        return getBookModel(url);
-    }
-
-    public BookModel getBookModel(@NonNull final BookInformation bookInformation) {
-        final URL url = bookInformation.getUrl();
-        if (url == null) {
-            return null;
-        }
-        return getBookModel(url);
-    }
 
     public BookModel getBookModel(@NonNull final URL url) {
         final HtmlScraper scraper = HtmlScraper.forUrl(url, cachePath);
@@ -63,20 +57,21 @@ public class AudiobookStoreHtml {
         return book;
     }
 
-    public List<BookModel> getPreorders() {
+    public List<BookModel> getPreorders(final WebDriver browser) {
+        browser.navigate().to(MY_LIBRARY_URL);
         Objects.requireNonNull(cookieStore, "Cookie store required to get preorders");
-        HtmlScraper.expire(MY_LIBRARY_URL, MY_LIBRARY_EXPIRY, cachePath);
-        final HtmlScraper html = HtmlScraper.forUrlWithDelay(MY_LIBRARY_URL, cachePath, DELAY_MS, cookieStore);
-        final HtmlScraper recentOrders = html.selectOne(".recent-orders > table");
+        final WebDriverWait wait = new WebDriverWait(browser, Duration.ofMillis(DELAY_MS));
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".recent-orders > table")));
+        final WebElement recentOrders = browser.findElement(By.cssSelector(".recent-orders > table"));
         final List<BookModel> preorders = new LinkedList<>();
-        recentOrders.selectMany("tr:has(.library-preorder)", row -> {
+        for (final WebElement row : recentOrders.findElements(By.cssSelector("tr:has(.library-preorder)"))) {
             final BookModel.BookModelBuilder bookBuilder = BookModel.builder()
-                .datePublish(StringStuff.toLocalDateFromMDY(row.selectOne(".library-preorder").getOwnText()))
-                .audiobookStoreUrl(StringStuff.urlFromString(row.selectOne(".my-lib-img a:has(img)").getAttr("href")))
-                .imageUrl(StringStuff.urlFromString(row.selectOne(".my-lib-img a img").getAttr("src")));
-            row.selectMany(".my-lib-details .titledetail-specs > div", detail -> {
-                final String label = detail.selectOne(".titledetail-label").getOwnText();
-                final String value = detail.selectOne(".titledetail-value").getOwnText();
+                .datePublish(StringStuff.toLocalDateFromMDY(row.findElement(By.cssSelector(".library-preorder")).getText()))
+                .audiobookStoreUrl(urlFromString(row.findElement(By.cssSelector(".my-lib-img a:has(img)")).getAttribute("href")))
+                .imageUrl(urlFromString(row.findElement(By.cssSelector(".my-lib-img a img")).getAttribute("src")));
+            for (final WebElement detail : row.findElements(By.cssSelector(".my-lib-details .titledetail-specs > div"))) {
+                final String label = detail.findElement(By.cssSelector(".titledetail-label")).getText();
+                final String value = detail.findElement(By.cssSelector(".titledetail-value")).getText();
                 switch (label) {
                     case "Title:":
                         bookBuilder.title(value);
@@ -88,17 +83,94 @@ public class AudiobookStoreHtml {
                         bookBuilder.narratorName(value);
                         break;
                     case "Run time:":
-                        final Duration duration = Duration.parse(detail.selectOne("time[itemprop=timeRequired]").getAttr("datetime"));
+                        final Duration duration = Duration.parse(detail.findElement(By.cssSelector("time[itemprop=timeRequired]")).getAttribute("datetime"));
                         bookBuilder.durationHours(duration.toMinutes() / 60d);
                         break;
                     case "Purchased:":
                         bookBuilder.datePurchase(LocalDate.parse(value, DateTimeFormatter.ofPattern("MM-dd-yyyy")));
                         break;
                 }
-            });
+            }
             preorders.add(bookBuilder.build());
-        });
+        }
         return preorders;
+    }
+
+    public List<BookModel> getWishlist(@NonNull final WebDriver browser) {
+        String nextPage = AudiobookStore.WISHLIST_URL;
+        browser.navigate().to(nextPage);
+        final LinkedList<BookModel> books = new LinkedList<>();
+        boolean morePages;
+        do {
+            morePages = false;
+            final WebDriverWait wait = new WebDriverWait(browser, Duration.ofMillis(DELAY_MS));
+            wait.until(ExpectedConditions.elementToBeClickable(By.cssSelector("section.features-books-cat")));
+            ((JavascriptExecutor) browser).executeScript("return window.stop()");
+            final WebElement table = browser.findElement(By.cssSelector("section.features-books-cat"));
+            final List<WebElement> figures = table.findElements(By.cssSelector("figure.wishlist"));
+            if (figures == null || figures.isEmpty()) {
+                break;
+            }
+            for (final WebElement figure : figures) {
+                final BookModel.BookModelBuilder bookBuilder = BookModel.builder();
+                final WebElement link = figure.findElement(By.cssSelector("span.title a"));
+                bookBuilder
+                    .imageUrl(urlFromString(figure
+                        .findElement(By.cssSelector("img.pro-img.categoryImage"))
+                        .getAttribute("src")
+                        .replace("-square-400.", "-square-1536.")))
+                    .audiobookStoreUrl(urlFromString(link.getAttribute("href")))
+                    .title(link.getAttribute("title"))
+                    .authorName(figure.findElement(By.cssSelector(".titledetail-author .authorName")).getText())
+                ;
+                books.add(bookBuilder.build());
+            }
+            ((JavascriptExecutor) browser).executeScript("window.scrollBy(0,document.body.scrollHeight)");
+            final List<WebElement> pagination = browser.findElements(By.cssSelector("a#ctl00_contentMain_lstProductsGridPager_ctl00_lnkMobileNext"));
+            for (final WebElement link : pagination) {
+                if (("Next".equals(link.getText()) || link.getText().isBlank()) && link.isDisplayed() && link.isEnabled()) {
+                    final String path = link.getAttribute("href");
+                    browser.navigate().to(path);
+                    morePages = true;
+                    break;
+                }
+            }
+        } while (morePages);
+        return books;
+    }
+
+    public void headlessSignIn(
+        @NonNull final WebDriver browser,
+        @NonNull final String email,
+        @NonNull final String password
+    ) {
+        browser.navigate().to(AudiobookStore.SIGN_IN_URL);
+        final WebDriverWait wait = new WebDriverWait(browser, Duration.ofMillis(DELAY_MS));
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("ctl00_contentMain_txtEmailLogin")));
+        final WebElement emailInput = browser.findElement(By.id("ctl00_contentMain_txtEmailLogin"));
+        Objects.requireNonNull(emailInput, "Could not find email input box");
+        emailInput.click();
+        emailInput.clear();
+        emailInput.sendKeys(email);
+        final WebElement passwordInput = browser.findElement(By.id("ctl00_contentMain_txtPasswordLogin"));
+        Objects.requireNonNull(passwordInput, "Could not find password input box");
+        passwordInput.click();
+        passwordInput.clear();
+        passwordInput.sendKeys(password);
+        final WebElement loginButton = browser.findElement(By.id("ctl00_contentMain_btnLogin"));
+        Objects.requireNonNull(loginButton, "Could not find login button");
+        loginButton.click();
+        final WebDriverWait wait2 = new WebDriverWait(browser, Duration.ofMillis(DELAY_MS * 2));
+        wait2.until(ExpectedConditions.visibilityOfElementLocated(By.id("hypTopSubMenu")));
+    }
+
+    public <T> T withBrowser(final Function<WebDriver, T> block) {
+        final WebDriver browser = BrowserStuff.getBrowser();
+        try {
+            return block.apply(browser);
+        } finally {
+            browser.quit();
+        }
     }
 
     @Getter
@@ -109,7 +181,7 @@ public class AudiobookStoreHtml {
         DatePublished("/mainEntity/datePublished", (b, d) -> b.setDatePublish(StringStuff.toLocalDate(d))),
         Duration("/mainEntity/timeRequired", (b, t) -> b.setDurationHours(doubleFromDuration(t))),
         Publisher("/mainEntity/publisher/name", BookModel::setPublisherName),
-        Image("/mainEntity/image", (b, i) -> b.setImageUrl(StringStuff.urlFromString(i))),
+        Image("/mainEntity/image", (b, i) -> b.setImageUrl(urlFromString(i))),
         ;
         private final String ldPath;
         private final BiConsumer<BookModel, String> setter;

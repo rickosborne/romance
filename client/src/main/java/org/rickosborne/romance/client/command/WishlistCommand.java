@@ -17,11 +17,11 @@ import java.util.Objects;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(
-    name = "preorders",
-    description = "Fetch a list of preorders from AudiobookStore"
+    name = "wishlist",
+    description = "Fetch your wishlist from AudiobookStore"
 )
 @Log
-public class PreordersCommand implements Callable<Integer> {
+public class WishlistCommand implements Callable<Integer> {
     @CommandLine.Mixin
     AudiobookStoreAuthOptions auth;
     private final BookSchema bookSchema = new BookSchema();
@@ -53,21 +53,17 @@ public class PreordersCommand implements Callable<Integer> {
         Objects.requireNonNull(absPassword, "TABS password is required");
         final JsonCookieStore cookieStore = JsonCookieStore.fromPath(cookieStorePath);
         final AudiobookStoreHtml storeHtml = new AudiobookStoreHtml(cachePath, cookieStore);
-        final List<BookModel> preorders = storeHtml.withBrowser(browser -> {
+        final List<BookModel> wishlist = storeHtml.withBrowser(browser -> {
             storeHtml.headlessSignIn(browser, absUsername, absPassword);
-            return storeHtml.getPreorders(browser);
+            return storeHtml.getWishlist(browser);
         });
-        if (preorders.isEmpty()) {
-            System.out.println("(no preorders)");
+        if (wishlist.isEmpty()) {
+            System.out.println("(no wishlist)");
             return 0;
         }
-        final JsonStoreFactory jsonStoreFactory = new JsonStoreFactory(dbPath, namingConvention);
-        final JsonStore<BookModel> bookStore = jsonStoreFactory.buildJsonStore(BookModel.class);
-        for (final BookModel preorder : preorders) {
-            final BookModel existing = bookStore.findLike(preorder);
-            final BookModel book = bookSchema.mergeModels(existing, preorder);
-            System.out.println(DocTabbed.fromBookModel(book));
-            bookStore.saveIfChanged(book);
+        for (final BookModel book : wishlist) {
+            final DocTabbed docTabbed = DocTabbed.fromBookModel(book);
+            System.out.println(docTabbed.toString());
         }
         return 0;
     }
