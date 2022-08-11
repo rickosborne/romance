@@ -28,6 +28,7 @@ public class AuthorSheetAdapter implements ModelSheetAdapter<AuthorModel> {
         setters.put("authorQueer", stringSetter((m, q) -> m.setQueer(YesNoUnknown.fromString(q))));
         setters.put("authorBookCount", intSetter(AuthorModel::setOwnedCount));
         setters.put("authorRatedCount", intSetter(AuthorModel::setRatedCount));
+        setters.put("authorRep", stringSetter(AuthorModel::setRep));
         setters.put("rateCharacters", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.CharacterDepth, r))));
         setters.put("rateGrowth", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.CharacterGrowth, r))));
         setters.put("rateConsistency", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.CharacterConsistency, r))));

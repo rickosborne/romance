@@ -6,13 +6,13 @@ import com.google.api.services.sheets.v4.model.Sheet;
 import com.google.api.services.sheets.v4.model.Spreadsheet;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
 import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.sheet.ModelSheetAdapter;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,23 +47,36 @@ public class SheetStuff {
         return colKeys;
     }
 
+    public static SheetDescriptor getSheetDescriptor(
+        final DbModel dbModel,
+        final Spreadsheet spreadsheet,
+        final Sheets.Spreadsheets spreadsheets
+    ) {
+        final String tabTitle = dbModel.getTabTitle();
+        final List<List<Object>> rows = BooksSheets.sheetValues(tabTitle, spreadsheets);
+        final Sheet sheet = BooksSheets.sheetTitled(tabTitle, spreadsheet);
+        final GridProperties gridProperties = sheet.getProperties().getGridProperties();
+        final int frozenRowCount = Optional.ofNullable(gridProperties.getFrozenRowCount()).orElse(0);
+        final int colCount = Optional.ofNullable(gridProperties.getColumnCount()).orElse(0);
+        final NamingConvention namingConvention = new NamingConvention();
+        final String[] columnKeys = getColumnKeys(rows, frozenRowCount, colCount, namingConvention);
+        return new SheetDescriptor(
+            colCount,
+            columnKeys,
+            frozenRowCount
+        );
+    }
+
     public static <M> List<Indexed<M>> readModels(
         final DbModel dbModel,
         final Spreadsheet spreadsheet,
         final Sheets.Spreadsheets spreadsheets,
         final ModelSheetAdapter<M> sheetAdapter
     ) {
-        final String tabTitle = dbModel.getTabTitle();
-        final Sheet sheet = BooksSheets.sheetTitled(tabTitle, spreadsheet);
-        final List<List<Object>> rows = BooksSheets.sheetValues(tabTitle, spreadsheets);
-        final GridProperties gridProperties = sheet.getProperties().getGridProperties();
-        final int frozenRowCount = Optional.ofNullable(gridProperties.getFrozenRowCount()).orElse(0);
-        final int colCount = Optional.ofNullable(gridProperties.getColumnCount()).orElse(0);
-        final NamingConvention namingConvention = new NamingConvention();
-        if (frozenRowCount == 0 || colCount == 0) {
-            return Collections.emptyList();
-        }
-        final String[] colKeys = getColumnKeys(rows, frozenRowCount, colCount, namingConvention);
+        final SheetDescriptor sheetDescriptor = getSheetDescriptor(dbModel, spreadsheet, spreadsheets);
+        final List<List<Object>> rows = BooksSheets.sheetValues(dbModel.getTabTitle(), spreadsheets);
+        final int frozenRowCount = sheetDescriptor.getFrozenRowCount();
+        final String[] colKeys = sheetDescriptor.getColumnKeys();
         final List<Indexed<M>> records = new ArrayList<>(rows.size() - frozenRowCount);
         for (int rowNum = frozenRowCount; rowNum < rows.size(); rowNum++) {
             final List<Object> row = rows.get(rowNum);
@@ -87,5 +100,12 @@ public class SheetStuff {
     public static class Indexed<M> {
         private final M model;
         private final int rowNum;
+    }
+
+    @Value
+    public static class SheetDescriptor {
+        int colCount;
+        String[] columnKeys;
+        int frozenRowCount;
     }
 }

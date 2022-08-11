@@ -16,7 +16,8 @@ import java.util.concurrent.Callable;
         AbsUserCommand.class,
         DataFromAudiobookStoreCommand.class,
         PreordersCommand.class,
-        WishlistCommand.class
+        WishlistCommand.class,
+        FillFromTABSCommand.class
     }
 )
 public class AudiobookStoreClient implements Callable<Integer> {

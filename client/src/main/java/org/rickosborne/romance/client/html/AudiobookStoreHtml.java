@@ -6,10 +6,8 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.rickosborne.romance.AudiobookStore;
@@ -30,7 +28,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 import static org.rickosborne.romance.AudiobookStore.DELAY_MS;
 import static org.rickosborne.romance.AudiobookStore.MY_LIBRARY_URL;
@@ -181,7 +178,9 @@ public class AudiobookStoreHtml {
         DatePublished("/mainEntity/datePublished", (b, d) -> b.setDatePublish(StringStuff.toLocalDate(d))),
         Duration("/mainEntity/timeRequired", (b, t) -> b.setDurationHours(doubleFromDuration(t))),
         Publisher("/mainEntity/publisher/name", BookModel::setPublisherName),
-        Image("/mainEntity/image", (b, i) -> b.setImageUrl(urlFromString(i))),
+        Image("/mainEntity/image", (b, i) -> b.setImageUrl(urlFromString(i.replace("-square-400", "-square-1536")))),
+        Gtin13("/mainEntity/gtin13", BookModel::setIsbn),
+        Isbn2("/mainEntity/isbn", BookModel::setIsbn),
         ;
         private final String ldPath;
         private final BiConsumer<BookModel, String> setter;

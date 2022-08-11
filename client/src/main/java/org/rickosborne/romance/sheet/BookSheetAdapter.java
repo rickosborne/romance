@@ -9,13 +9,11 @@ import org.rickosborne.romance.db.Diff;
 import org.rickosborne.romance.db.SchemaDiff;
 import org.rickosborne.romance.db.model.BookAttributes;
 import org.rickosborne.romance.db.model.BookModel;
-import org.rickosborne.romance.db.model.SchemaAttribute;
 import org.rickosborne.romance.util.BookRating;
 import org.rickosborne.romance.util.ModelSetter;
 import org.rickosborne.romance.util.Pair;
 
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -106,7 +104,7 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
         catLocation(BookAttributes.location, false, BS.stringSetter(BookModel::setLocation)),
         catSpeed(BookAttributes.speed, false, BS.stringSetter(BookModel::setSpeed)),
         catEra(BookAttributes.genre, false, BS.stringSetter(BookModel::setGenre)),
-        catNeurodiversity(BookAttributes.neurodiversity, false, BS.stringSetter(BookModel::setNeurodiversity)),
+        catRepresentation(BookAttributes.neurodiversity, false, BS.stringSetter(BookModel::setNeurodiversity)),
         catPov(BookAttributes.pov, false, BS.stringSetter(BookModel::setPov)),
         catLike(BookAttributes.like, false, BS.stringSetter(BookModel::setLike)),
         catSynopsis(BookAttributes.synopsis, false, BS.stringSetter(BookModel::setSynopsis)),
@@ -132,7 +130,7 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
         rateTension(BS.doubleSetter(BS.ifNotNull((m, s) -> m.getRatings().put(BookRating.Tension, s)))),
         rateBplot(BS.doubleSetter(BS.ifNotNull((m, s) -> m.getRatings().put(BookRating.BPlot, s)))),
         rateVibe(BS.doubleSetter(BS.ifNotNull((m, s) -> m.getRatings().put(BookRating.Vibe, s)))),
-        rateHea(BS.doubleSetter(BS.ifNotNull((m, s) -> m.getRatings().put(BookRating.HEA, s)))),
+        rateResolution(BS.doubleSetter(BS.ifNotNull((m, s) -> m.getRatings().put(BookRating.HEA, s)))),
         rateOverall(BS.doubleSetter(BS.ifNotNull((m, s) -> m.getRatings().put(BookRating.Overall, s)))),
         scoreZeroOne(ModelSetter::setNothing),
         scorePlusMinus(ModelSetter::setNothing),

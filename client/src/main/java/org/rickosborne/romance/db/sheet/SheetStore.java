@@ -42,6 +42,10 @@ public class SheetStore<M> implements ModelStore<M> {
         .collect(Collectors.toMap(i -> idFromModel(i.getModel()), i -> i));
     @Getter(lazy = true)
     private final Sheet sheet = BooksSheets.sheetTitled(getDbModel().getTabTitle(), getSpreadsheet());
+    @Getter(lazy = true)
+    private final SheetStuff.SheetDescriptor sheetDescriptor = SheetStuff.getSheetDescriptor(getDbModel(), getSpreadsheet(), getSpreadsheets());
+    @Getter(lazy = true)
+    private final String[] columnKeys = getSheetDescriptor().getColumnKeys();
 
     @Override
     public M findById(final String id) {
