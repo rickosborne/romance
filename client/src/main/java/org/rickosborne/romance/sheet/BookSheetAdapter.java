@@ -80,6 +80,7 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
         linkGoodreads(BookAttributes.goodreadsUrl, true, BS.urlSetter(BookModel::setGoodreadsUrl)),
         linkAudiobookstore(BookAttributes.audiobookStoreUrl, true, BS.urlSetter(BookModel::setAudiobookStoreUrl)),
         linkRickReview(BookAttributes.rickReviewUrl, false, BS.urlSetter(BookModel::setRickReviewUrl)),
+        linkStorygraph(BookAttributes.storygraphUrl, true, BS.urlSetter(BookModel::setStorygraphUrl)),
         linkImage(BookAttributes.imageUrl, true, BS.urlSetter(BookModel::setImageUrl)),
         calcAuthorBookCount(ModelSetter::setNothing),
         calcNarratorBookCount(ModelSetter::setNothing),

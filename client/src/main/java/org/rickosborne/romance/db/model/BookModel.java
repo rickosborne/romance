@@ -62,6 +62,7 @@ public class BookModel {
     private String sexVariety;
     private String source;
     private String speed;
+    private URL storygraphUrl;
     private String synopsis;
     @JsonPropertyOrder(alphabetic = true)
     private final Set<String> tags = new TreeSet<>();

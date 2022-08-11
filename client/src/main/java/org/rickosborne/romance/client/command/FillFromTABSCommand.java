@@ -2,16 +2,11 @@ package org.rickosborne.romance.client.command;
 
 import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
 import com.google.api.services.sheets.v4.model.Request;
-import com.google.api.services.sheets.v4.model.Sheet;
 import lombok.extern.java.Log;
-import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.db.DbModel;
-import org.rickosborne.romance.db.json.JsonStore;
+import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
-import org.rickosborne.romance.db.model.ModelSchema;
-import org.rickosborne.romance.db.sheet.SheetStore;
-import org.rickosborne.romance.sheet.ModelSheetAdapter;
 import org.rickosborne.romance.util.SheetStuff;
 import picocli.CommandLine;
 
@@ -20,8 +15,8 @@ import java.net.URL;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+
+import static org.rickosborne.romance.util.StringStuff.nonBlank;
 
 @Log
 @CommandLine.Command(
@@ -32,17 +27,11 @@ public class FillFromTABSCommand extends ASheetCommand {
 
     @Override
     protected Integer doWithSheets() {
-        final Class<BookModel> bookModelType = DbModel.Book.getModelType();
-        final JsonStore<BookModel> jsonStore = getJsonStoreFactory().buildJsonStore(bookModelType);
-        final ModelSchema<BookModel> modelSchema = jsonStore.getModelSchema();
-        final SheetStore<BookModel> bookSheetStore = getSheetStoreFactory().buildSheetStore(bookModelType);
         final AudiobookStoreHtml audiobookStoreHtml = getAudiobookStoreHtml();
-        final ModelSheetAdapter<BookModel> sheetAdapter = getAdapterFactory().adapterByName(DbModel.Book.getTabTitle());
-        final Sheet sheet = BooksSheets.sheetTitled(DbModel.Book.getTabTitle(), getSpreadsheet());
-        final String[] colKeys = bookSheetStore.getSheetDescriptor().getColumnKeys();
-        final Map<String, Integer> colNums = IntStream.range(0, colKeys.length).boxed().collect(Collectors.toMap(i -> colKeys[i], i -> i));
         final List<Request> changeRequests = new LinkedList<>();
-        for (final SheetStuff.Indexed<BookModel> bookRecord : bookSheetStore.getRecords()) {
+        final DataSet<BookModel> bookData = new DataSet<>(DbModel.Book);
+        final DataSet<AuthorModel> authorData = new DataSet<>(DbModel.Author);
+        for (final SheetStuff.Indexed<BookModel> bookRecord : bookData.getSheetStore().getRecords()) {
             final BookModel sheetBook = bookRecord.getModel();
             final int rowNum = bookRecord.getRowNum();
             final URL tabsUrl = sheetBook.getAudiobookStoreUrl();
@@ -50,16 +39,32 @@ public class FillFromTABSCommand extends ASheetCommand {
                 continue;
             }
             final BookModel tabsBook = audiobookStoreHtml.getBookModel(tabsUrl);
-            final BookModel sheetPlusTabs = modelSchema.mergeModels(tabsBook, sheetBook);
-            final BookModel jsonBook = jsonStore.findLikeFromCache(sheetPlusTabs);
-            final BookModel all = modelSchema.mergeModels(jsonBook, sheetPlusTabs);
-            final Map<String, String> changes = sheetAdapter.findChangesToSheet(sheetBook, all);
-            if (!changes.isEmpty()) {
-                System.out.println("~~~ " + rowNum + ":" + jsonStore.idFromModel(all));
-                System.out.println(changes);
-                changeRequests.addAll(changeRequestsFromModelChanges(sheet, colNums, rowNum, changes));
+            final BookModel sheetPlusTabs = bookData.getModelSchema().mergeModels(tabsBook, sheetBook);
+            final BookModel jsonBook = bookData.getJsonStore().findLikeFromCache(sheetPlusTabs);
+            final BookModel allBook = bookData.getModelSchema().mergeModels(jsonBook, sheetPlusTabs);
+            final Map<String, String> bookChanges = bookData.getModelSheetAdapter().findChangesToSheet(sheetBook, allBook);
+            if (!bookChanges.isEmpty()) {
+                System.out.println("~~~ " + rowNum + ":" + bookData.getJsonStore().idFromModel(allBook));
+                System.out.println(bookChanges);
+                changeRequests.addAll(changeRequestsFromModelChanges(bookData.getSheet(), bookData.getColNums(), rowNum, bookChanges));
             }
-            jsonStore.saveIfChanged(all);
+            bookData.getJsonStore().saveIfChanged(allBook);
+            if (nonBlank(allBook.getAuthorName())) {
+                final AuthorModel sheetAuthor = authorData.getSheetStore().findLike(AuthorModel.builder().name(allBook.getAuthorName()).build());
+                final Integer authorRowNum = authorData.getSheetStore().getRowNum(sheetAuthor);
+                if (authorRowNum != null) {
+                    final AuthorModel tabsAuthor = audiobookStoreHtml.getAuthorModelFromBook(tabsUrl);
+                    final AuthorModel sheetPlusTabsAuthor = authorData.getModelSchema().mergeModels(tabsAuthor, sheetAuthor);
+                    final AuthorModel jsonAuthor = authorData.getJsonStore().findLike(sheetAuthor);
+                    final AuthorModel allAuthor = authorData.getModelSchema().mergeModels(jsonAuthor, sheetPlusTabsAuthor);
+                    final Map<String, String> authorChanges = authorData.getModelSheetAdapter().findChangesToSheet(sheetAuthor, allAuthor);
+                    if (!authorChanges.isEmpty()) {
+                        System.out.println("~~~ " + authorData.getJsonStore().idFromModel(allAuthor));
+                        System.out.println(authorChanges);
+                        changeRequests.addAll(changeRequestsFromModelChanges(authorData.getSheet(), authorData.getColNums(), authorRowNum, authorChanges));
+                    }
+                }
+            }
         }
         if (isWrite() && !changeRequests.isEmpty()) {
             final BatchUpdateSpreadsheetRequest updateSpreadsheetRequest = new BatchUpdateSpreadsheetRequest()

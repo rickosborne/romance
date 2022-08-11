@@ -2,6 +2,7 @@ package org.rickosborne.romance.db.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import lombok.Builder;
 import lombok.Data;
 import org.rickosborne.romance.util.BookRating;
 import org.rickosborne.romance.util.YesNoUnknown;
@@ -11,8 +12,14 @@ import java.util.Map;
 import java.util.TreeMap;
 
 @Data
+@Builder(toBuilder = true)
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class AuthorModel {
+    public static AuthorModel build() {
+        return AuthorModel.builder().build();
+    }
+
+    private URL audiobookStoreUrl;
     private Integer dnfCount;
     private Integer fiveStarCount;
     private Integer fourStarPlusCount;
@@ -32,6 +39,7 @@ public class AuthorModel {
     private String rep;
     private URL siteUrl;
     private String stars;
+    private URL storyGraphUrl;
     private String twitterName;
     private URL twitterUrl;
 }

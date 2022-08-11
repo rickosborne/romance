@@ -2,59 +2,93 @@ package org.rickosborne.romance.sheet;
 
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
+import org.rickosborne.romance.db.Diff;
+import org.rickosborne.romance.db.SchemaDiff;
+import org.rickosborne.romance.db.model.AuthorAttributes;
 import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.util.BookRating;
 import org.rickosborne.romance.util.ModelSetter;
+import org.rickosborne.romance.util.Pair;
 import org.rickosborne.romance.util.YesNoUnknown;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class AuthorSheetAdapter implements ModelSheetAdapter<AuthorModel> {
+    private final static ModelSetter<AuthorModel> AMS = new ModelSetter<>() {
+    };
+    private static final Map<AuthorAttributes, SheetFields> sfByAttr = Stream
+        .of(SheetFields.values())
+        .filter(sf -> sf.authorAttribute != null && sf.safeToWriteToSheet)
+        .collect(Collectors.toMap(sf -> sf.authorAttribute, sf -> sf));
     @Getter
     private final DbModel dbModel = DbModel.Author;
     @Getter
-    private final Map<String, BiConsumer<AuthorModel, Object>> setters = new HashMap<>();
-
-    {
-        setters.put("authorName", stringSetter(AuthorModel::setName));
-        setters.put("authorGoodreadsLink", urlSetter(AuthorModel::setGoodreadsUrl));
-        setters.put("authorSiteLink", urlSetter(AuthorModel::setSiteUrl));
-        setters.put("authorTwitter", stringSetter(AuthorModel::setTwitterName));
-        setters.put("authorPronouns", stringSetter(AuthorModel::setPronouns));
-        setters.put("authorQueer", stringSetter((m, q) -> m.setQueer(YesNoUnknown.fromString(q))));
-        setters.put("authorBookCount", intSetter(AuthorModel::setOwnedCount));
-        setters.put("authorRatedCount", intSetter(AuthorModel::setRatedCount));
-        setters.put("authorRep", stringSetter(AuthorModel::setRep));
-        setters.put("rateCharacters", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.CharacterDepth, r))));
-        setters.put("rateGrowth", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.CharacterGrowth, r))));
-        setters.put("rateConsistency", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.CharacterConsistency, r))));
-        setters.put("rateWorld", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.World, r))));
-        setters.put("rateTension", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.Tension, r))));
-        setters.put("rateBplot", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.BPlot, r))));
-        setters.put("rateVibe", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.Vibe, r))));
-        setters.put("rateHea", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.HEA, r))));
-        setters.put("rateOverall", doubleSetter(ifNotNull((m, r) -> m.getRatings().put(BookRating.Overall, r))));
-        setters.put("rateDnfCount", intSetter(AuthorModel::setDnfCount));
-        setters.put("rate4", intSetter(AuthorModel::setFourStarPlusCount));
-        setters.put("rate5", intSetter(AuthorModel::setFiveStarCount));
-        setters.put("rateMin", doubleSetter(AuthorModel::setMinRating));
-        setters.put("rateMax", doubleSetter(AuthorModel::setMaxRating));
-        setters.put("rateRange", ModelSetter::setNothing);
-        setters.put("rateOdds4", doubleSetter(AuthorModel::setOdds4));
-        setters.put("statsAvgPages", doubleSetter(AuthorModel::setMeanPages));
-        setters.put("statsAvgDuration", doubleSetter(AuthorModel::setMeanDurationHours));
-        setters.put("statsStars", stringSetter(AuthorModel::setStars));
-        setters.put("genTwitterLink", urlSetter(AuthorModel::setTwitterUrl));
-        setters.put("genGoodreads", ModelSetter::setNothing);
-        setters.put("genRating", ModelSetter::setNothing);
-    }
+    private final Map<String, BiConsumer<AuthorModel, Object>> setters = Stream
+        .of(SheetFields.values())
+        .collect(Collectors.toMap(Enum::name, sf -> sf.setter));
 
     @Override
     public String fileNameForModel(final @NonNull AuthorModel model, final @NonNull NamingConvention namingConvention) {
         return namingConvention.fileNameFromTexts(model.getName());
+    }
+
+    @Override
+    public Map<String, String> findChangesToSheet(@NonNull final AuthorModel sheetAuthor, @NonNull final AuthorModel existing) {
+        return new SchemaDiff().diffModels(sheetAuthor, existing).getChanges().stream()
+            .filter(c -> c.getOperation() == Diff.Operation.Add || c.getOperation() == Diff.Operation.Change)
+            .map(c -> Pair.build(c, sfByAttr.get((AuthorAttributes) c.getAttribute())))
+            .filter(p -> p.hasRight() && p.getLeft().getAfterValue() != null)
+            .collect(Collectors.toMap(p -> p.getRight().name(), p -> p.getLeft().getAfterValue().toString()));
+    }
+
+    @RequiredArgsConstructor
+    enum SheetFields implements ModelSetter<AuthorModel> {
+        authorName(AuthorAttributes.name, false, AMS.stringSetter(AuthorModel::setName)),
+        authorGoodreadsLink(AuthorAttributes.goodreadsUrl, true, AMS.urlSetter(AuthorModel::setGoodreadsUrl)),
+        authorAudiobookstoreLink(AuthorAttributes.audiobookStoreUrl, true, AMS.urlSetter(AuthorModel::setAudiobookStoreUrl)),
+        authorStorygraphLink(AuthorAttributes.storyGraphUrl, true, AMS.urlSetter(AuthorModel::setStoryGraphUrl)),
+        authorSiteLink(AuthorAttributes.siteUrl, true, AMS.urlSetter(AuthorModel::setSiteUrl)),
+        authorTwitter(AuthorAttributes.twitterName, false, AMS.stringSetter(AuthorModel::setTwitterName)),
+        authorPronouns(AuthorAttributes.pronouns, false, AMS.stringSetter(AuthorModel::setPronouns)),
+        authorQueer(AuthorAttributes.queer, false, AMS.stringSetter((m, q) -> m.setQueer(YesNoUnknown.fromString(q)))),
+        authorBookCount(AuthorAttributes.ownedCount, false, AMS.intSetter(AuthorModel::setOwnedCount)),
+        authorRatedCount(AuthorAttributes.ratedCount, false, AMS.intSetter(AuthorModel::setRatedCount)),
+        authorRep(AuthorAttributes.rep, false, AMS.stringSetter(AuthorModel::setRep)),
+        rateCharacters(AMS.doubleSetter(AMS.ifNotNull((m, r) -> m.getRatings().put(BookRating.CharacterDepth, r)))),
+        rateGrowth(AMS.doubleSetter(AMS.ifNotNull((m, r) -> m.getRatings().put(BookRating.CharacterGrowth, r)))),
+        rateConsistency(AMS.doubleSetter(AMS.ifNotNull((m, r) -> m.getRatings().put(BookRating.CharacterConsistency, r)))),
+        rateWorld(AMS.doubleSetter(AMS.ifNotNull((m, r) -> m.getRatings().put(BookRating.World, r)))),
+        rateTension(AMS.doubleSetter(AMS.ifNotNull((m, r) -> m.getRatings().put(BookRating.Tension, r)))),
+        rateBplot(AMS.doubleSetter(AMS.ifNotNull((m, r) -> m.getRatings().put(BookRating.BPlot, r)))),
+        rateVibe(AMS.doubleSetter(AMS.ifNotNull((m, r) -> m.getRatings().put(BookRating.Vibe, r)))),
+        rateHea(AMS.doubleSetter(AMS.ifNotNull((m, r) -> m.getRatings().put(BookRating.HEA, r)))),
+        rateOverall(AMS.doubleSetter(AMS.ifNotNull((m, r) -> m.getRatings().put(BookRating.Overall, r)))),
+        rateDnfCount(AuthorAttributes.dnfCount, false, AMS.intSetter(AuthorModel::setDnfCount)),
+        rate4(AuthorAttributes.fourStarPlusCount, false, AMS.intSetter(AuthorModel::setFourStarPlusCount)),
+        rate5(AuthorAttributes.fiveStarCount, false, AMS.intSetter(AuthorModel::setFiveStarCount)),
+        rateMin(AuthorAttributes.minRating, false, AMS.doubleSetter(AuthorModel::setMinRating)),
+        rateMax(AuthorAttributes.maxRating, false, AMS.doubleSetter(AuthorModel::setMaxRating)),
+        rateRange(ModelSetter::setNothing),
+        rateOdds4(AuthorAttributes.odds4, false, AMS.doubleSetter(AuthorModel::setOdds4)),
+        statsAvgPages(AuthorAttributes.meanPages, false, AMS.doubleSetter(AuthorModel::setMeanPages)),
+        statsAvgDuration(AuthorAttributes.meanDurationHours, false, AMS.doubleSetter(AuthorModel::setMeanDurationHours)),
+        statsStars(AuthorAttributes.stars, false, AMS.stringSetter(AuthorModel::setStars)),
+        genTwitterLink(AuthorAttributes.twitterUrl, false, AMS.urlSetter(AuthorModel::setTwitterUrl)),
+        genGoodreads(ModelSetter::setNothing),
+        genRating(ModelSetter::setNothing),
+        ;
+        private final AuthorAttributes authorAttribute;
+        private final boolean safeToWriteToSheet;
+        private final BiConsumer<AuthorModel, Object> setter;
+
+        SheetFields(@NonNull final BiConsumer<AuthorModel, Object> setter) {
+            this(null, false, setter);
+        }
     }
 }

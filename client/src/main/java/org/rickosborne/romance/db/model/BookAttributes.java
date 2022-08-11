@@ -47,6 +47,7 @@ public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
     sexVariety(BookModel::getSexVariety, BookModel::setSexVariety, String.class),
     source(BookModel::getSource, BookModel::setSource, String.class),
     speed(BookModel::getSpeed, BookModel::setSpeed, String.class),
+    storygraphUrl(BookModel::getStorygraphUrl, BookModel::setStorygraphUrl, URL.class),
     synopsis(BookModel::getSynopsis, BookModel::setSynopsis, String.class),
     tags(BookModel::getTags, null, Set.class),
     title(BookModel::getTitle, BookModel::setTitle, String.class),

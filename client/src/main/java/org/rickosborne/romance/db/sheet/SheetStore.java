@@ -17,6 +17,7 @@ import org.rickosborne.romance.util.SheetStuff;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -60,6 +61,10 @@ public class SheetStore<M> implements ModelStore<M> {
 
     private SheetStuff.Indexed<M> findIndexed(final M model) {
         return getRecordsById().get(idFromModel(model));
+    }
+
+    public Integer getRowNum(final M model) {
+        return Optional.ofNullable(findIndexed(model)).map(SheetStuff.Indexed::getRowNum).orElse(null);
     }
 
     @Override

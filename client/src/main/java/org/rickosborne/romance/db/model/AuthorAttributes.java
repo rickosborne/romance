@@ -9,6 +9,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 public enum AuthorAttributes implements SchemaAttribute<AuthorModel, Object> {
+    audiobookStoreUrl(AuthorModel::getAudiobookStoreUrl, AuthorModel::setAudiobookStoreUrl, URL.class),
+    dnfCount(AuthorModel::getDnfCount, AuthorModel::setDnfCount, Integer.class),
     fiveStarCount(AuthorModel::getFiveStarCount, AuthorModel::setFiveStarCount, Integer.class),
     fourStarPlusCount(AuthorModel::getFourStarPlusCount, AuthorModel::setFourStarPlusCount, Integer.class),
     goodreadsUrl(AuthorModel::getGoodreadsUrl, AuthorModel::setGoodreadsUrl, URL.class),
@@ -17,13 +19,16 @@ public enum AuthorAttributes implements SchemaAttribute<AuthorModel, Object> {
     meanPages(AuthorModel::getMeanPages, AuthorModel::setMeanPages, Double.class),
     minRating(AuthorModel::getMinRating, AuthorModel::setMinRating, Double.class),
     name(AuthorModel::getName, AuthorModel::setName, String.class),
+    odds4(AuthorModel::getOdds4, AuthorModel::setOdds4, Double.class),
     ownedCount(AuthorModel::getOwnedCount, AuthorModel::setOwnedCount, Integer.class),
     pronouns(AuthorModel::getPronouns, AuthorModel::setPronouns, String.class),
     queer(AuthorModel::getQueer, AuthorModel::setQueer, YesNoUnknown.class),
     ratedCount(AuthorModel::getRatedCount, AuthorModel::setRatedCount, Integer.class),
     ratings(AuthorModel::getRatings, null, Map.class),
+    rep(AuthorModel::getRep, AuthorModel::setRep, String.class),
     siteUrl(AuthorModel::getSiteUrl, AuthorModel::setSiteUrl, URL.class),
     stars(AuthorModel::getStars, AuthorModel::setStars, String.class),
+    storyGraphUrl(AuthorModel::getStoryGraphUrl, AuthorModel::setStoryGraphUrl, URL.class),
     twitterName(AuthorModel::getTwitterName, AuthorModel::setTwitterName, String.class),
     twitterUrl(AuthorModel::getTwitterUrl, AuthorModel::setTwitterUrl, URL.class),
     ;

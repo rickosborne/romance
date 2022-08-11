@@ -11,7 +11,7 @@ public class AuthorSchema implements ModelSchema<AuthorModel> {
 
     @Override
     public AuthorModel buildModel() {
-        return new AuthorModel();
+        return AuthorModel.build();
     }
 
     @Override

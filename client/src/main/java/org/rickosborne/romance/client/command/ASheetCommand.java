@@ -12,12 +12,19 @@ import com.google.api.services.sheets.v4.model.Spreadsheet;
 import com.google.api.services.sheets.v4.model.UpdateCellsRequest;
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.Value;
 import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
+import org.rickosborne.romance.db.DbModel;
+import org.rickosborne.romance.db.json.JsonStore;
 import org.rickosborne.romance.db.json.JsonStoreFactory;
+import org.rickosborne.romance.db.model.ModelSchema;
+import org.rickosborne.romance.db.sheet.SheetStore;
 import org.rickosborne.romance.db.sheet.SheetStoreFactory;
 import org.rickosborne.romance.sheet.AdapterFactory;
+import org.rickosborne.romance.sheet.ModelSheetAdapter;
 import org.rickosborne.romance.util.StringStuff;
 import picocli.CommandLine;
 
@@ -31,6 +38,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public abstract class ASheetCommand implements Callable<Integer> {
     @Getter(value = AccessLevel.PROTECTED)
@@ -149,4 +158,30 @@ public abstract class ASheetCommand implements Callable<Integer> {
     }
 
     abstract protected Integer doWithSheets();
+
+
+    @Value
+    protected class DataSet<T> {
+        String[] colKeys;
+        Map<String, Integer> colNums;
+        DbModel dbModel;
+        JsonStore<T> jsonStore;
+        ModelSchema<T> modelSchema;
+        ModelSheetAdapter<T> modelSheetAdapter;
+        Class<T> modelType;
+        Sheet sheet;
+        SheetStore<T> sheetStore;
+
+        public DataSet(@NonNull final DbModel dbModel) {
+            this.dbModel = dbModel;
+            modelType = dbModel.getModelType();
+            jsonStore = getJsonStoreFactory().buildJsonStore(modelType);
+            modelSchema = jsonStore.getModelSchema();
+            sheetStore = getSheetStoreFactory().buildSheetStore(modelType);
+            colKeys = sheetStore.getColumnKeys();
+            colNums = IntStream.range(0, colKeys.length).boxed().collect(Collectors.toMap(i -> colKeys[i], i -> i));
+            modelSheetAdapter = getAdapterFactory().adapterForType(modelType);
+            sheet = BooksSheets.sheetTitled(dbModel.getTabTitle(), getSpreadsheet());
+        }
+    }
 }

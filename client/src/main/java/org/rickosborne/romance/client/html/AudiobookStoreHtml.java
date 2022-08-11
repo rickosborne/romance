@@ -14,6 +14,7 @@ import org.rickosborne.romance.AudiobookStore;
 import org.rickosborne.romance.client.JsonCookieStore;
 import org.rickosborne.romance.client.command.HtmlScraper;
 import org.rickosborne.romance.db.DbJsonWriter;
+import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.util.BrowserStuff;
 import org.rickosborne.romance.util.StringStuff;
@@ -39,19 +40,31 @@ public class AudiobookStoreHtml {
     private final Path cachePath;
     private final JsonCookieStore cookieStore;
 
+    public AuthorModel getAuthorModelFromBook(@NonNull final URL bookUrl) {
+        return getFromBook(AuthorModel.builder().build(), bookUrl, AuthorModelLD.values());
+    }
+
     public BookModel getBookModel(@NonNull final URL url) {
-        final HtmlScraper scraper = HtmlScraper.forUrl(url, cachePath);
-        final String ld = scraper.selectOne("script[type=application/ld+json]").getHtml();
-        final JsonNode ldNode = DbJsonWriter.readTree(ld);
         final BookModel book = BookModel.builder().build();
         book.setAudiobookStoreUrl(url);
-        for (final BookModelLD ldItem : BookModelLD.values()) {
+        return getFromBook(book, url, BookModelLD.values());
+    }
+
+    protected <M, E extends Enum<E> & LinkedData<M>> M getFromBook(
+        @NonNull final M model,
+        @NonNull final URL bookUrl,
+        @NonNull final E[] ldValues
+    ) {
+        final HtmlScraper scraper = HtmlScraper.forUrl(bookUrl, cachePath);
+        final String ld = scraper.selectOne("script[type=application/ld+json]").getHtml();
+        final JsonNode ldNode = DbJsonWriter.readTree(ld);
+        for (final E ldItem : ldValues) {
             final JsonNode value = ldNode.at(ldItem.getLdPath());
             if (value != null && value.isTextual()) {
-                ldItem.getSetter().accept(book, value.asText());
+                ldItem.getSetter().accept(model, value.asText());
             }
         }
-        return book;
+        return model;
     }
 
     public List<BookModel> getPreorders(final WebDriver browser) {
@@ -172,7 +185,17 @@ public class AudiobookStoreHtml {
 
     @Getter
     @RequiredArgsConstructor
-    enum BookModelLD {
+    enum AuthorModelLD implements LinkedData<AuthorModel> {
+        AuthorName("/mainEntity/author/name", AuthorModel::setName),
+        TabsLink("/mainEntity/author/url", (a, v) -> a.setAudiobookStoreUrl(urlFromString(v))),
+        ;
+        private final String ldPath;
+        private final BiConsumer<AuthorModel, String> setter;
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    enum BookModelLD implements LinkedData<BookModel> {
         AuthorName("/mainEntity/author/name", BookModel::setAuthorName),
         NarratorName("/mainEntity/readBy/name", BookModel::setNarratorName),
         DatePublished("/mainEntity/datePublished", (b, d) -> b.setDatePublish(StringStuff.toLocalDate(d))),
@@ -184,5 +207,11 @@ public class AudiobookStoreHtml {
         ;
         private final String ldPath;
         private final BiConsumer<BookModel, String> setter;
+    }
+
+    interface LinkedData<M> {
+        String getLdPath();
+
+        BiConsumer<M, String> getSetter();
     }
 }
