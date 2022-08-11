@@ -5,18 +5,19 @@ import org.apache.commons.codec.digest.DigestUtils;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 
 public class StringStuff {
     public static final Pattern BOOLEAN = Pattern.compile("^(?:true|false)$", Pattern.CASE_INSENSITIVE);
     public static final String CRLF = "\n";
+    public static final int FILE_NAME_MAX_LENGTH = 150;
     public static final String[] FRACTIONS = new String[]{"", "¼", "½", "¾"};
     public static final Pattern ISO_DATE = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
     public static final Pattern NUMERIC = Pattern.compile("^[\\d,]+(?:\\.\\d*)?$");
-    public static final int FILE_NAME_MAX_LENGTH = 150;
 
     public static String cacheName(@NonNull final URL url) {
         return String.join("-",
@@ -44,6 +45,21 @@ public class StringStuff {
 
     public static boolean nonBlank(final String t) {
         return t != null && !t.isBlank();
+    }
+
+    @SafeVarargs
+    public static <T, V> BiConsumer<T, V> setButNot(final BiConsumer<T, V> downstream, @NonNull final V... avoid) {
+        return (t, v) -> {
+            if (v == null) {
+                return;
+            }
+            for (final V a : avoid) {
+                if (Objects.equals(v, a)) {
+                    return;
+                }
+            }
+            downstream.accept(t, v);
+        };
     }
 
     public static String starsFromNumber(final Double num) {

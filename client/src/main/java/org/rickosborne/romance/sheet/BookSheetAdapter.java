@@ -20,6 +20,8 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.rickosborne.romance.util.StringStuff.setButNot;
+
 public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
     private final static ModelSetter<BookModel> BS = new ModelSetter<>() {
     };
@@ -76,7 +78,7 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
                 BS.localDateSetter(BookModel::setDateRead).accept(m, o);
             }
         }),
-        isbn(BookAttributes.isbn, true, BS.stringSetter(BookModel::setIsbn)),
+        isbn(BookAttributes.isbn, true, BS.stringSetter(setButNot(BookModel::setIsbn, "null", ""))),
         linkGoodreads(BookAttributes.goodreadsUrl, true, BS.urlSetter(BookModel::setGoodreadsUrl)),
         linkAudiobookstore(BookAttributes.audiobookStoreUrl, true, BS.urlSetter(BookModel::setAudiobookStoreUrl)),
         linkRickReview(BookAttributes.rickReviewUrl, false, BS.urlSetter(BookModel::setRickReviewUrl)),

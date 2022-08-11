@@ -10,6 +10,8 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import static org.rickosborne.romance.util.StringStuff.setButNot;
+
 public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
     audiobookStoreUrl(BookModel::getAudiobookStoreUrl, BookModel::setAudiobookStoreUrl, URL.class),
     authorName(BookModel::getAuthorName, BookModel::setAuthorName, String.class),
@@ -25,7 +27,7 @@ public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
     genre(BookModel::getGenre, BookModel::setGenre, String.class),
     goodreadsUrl(BookModel::getGoodreadsUrl, BookModel::setGoodreadsUrl, URL.class),
     imageUrl(BookModel::getImageUrl, BookModel::setImageUrl, URL.class, (a, b) -> a.getPath().contains("tabs.web.media") ? a : b),
-    isbn(BookModel::getIsbn, BookModel::setIsbn, String.class),
+    isbn(BookModel::getIsbn, setButNot(BookModel::setIsbn, "null", ""), String.class),
     hea(BookModel::getHea, BookModel::setHea, String.class),
     like(BookModel::getLike, BookModel::setLike, String.class),
     location(BookModel::getLocation, BookModel::setLocation, String.class),
