@@ -27,6 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -202,8 +203,8 @@ public class AudiobookStoreHtml {
         Duration("/mainEntity/timeRequired", (b, t) -> b.setDurationHours(doubleFromDuration(t))),
         Publisher("/mainEntity/publisher/name", BookModel::setPublisherName),
         Image("/mainEntity/image", (b, i) -> b.setImageUrl(urlFromString(i.replace("-square-400", "-square-1536")))),
-        Gtin13("/mainEntity/gtin13", BookModel::setIsbn),
-        Isbn2("/mainEntity/isbn", BookModel::setIsbn),
+        Gtin13("/mainEntity/gtin13", (b, i) -> Optional.ofNullable(i).filter(v -> !"null".equals(v)).ifPresent(b::setIsbn)),
+        Isbn2("/mainEntity/isbn", (b, i) -> Optional.ofNullable(i).filter(v -> !"null".equals(v)).ifPresent(b::setIsbn)),
         ;
         private final String ldPath;
         private final BiConsumer<BookModel, String> setter;

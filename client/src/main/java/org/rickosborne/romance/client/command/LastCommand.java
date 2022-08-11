@@ -12,6 +12,7 @@ import org.rickosborne.romance.client.CacheClient;
 import org.rickosborne.romance.client.GoodreadsService;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.client.html.GoodreadsHtml;
+import org.rickosborne.romance.client.html.StoryGraphHtml;
 import org.rickosborne.romance.client.response.AudiobookStoreSuggestion;
 import org.rickosborne.romance.client.response.BookInformation;
 import org.rickosborne.romance.client.response.GoodreadsAutoComplete;
@@ -98,6 +99,7 @@ public class LastCommand implements Callable<Integer> {
         jsonStoreFactory = new JsonStoreFactory(dbPath, namingConvention);
         final JsonStore<BookModel> bookStore = jsonStoreFactory.buildJsonStore(BookModel.class);
         final StringBuilder sb = new StringBuilder();
+        final StoryGraphHtml storyGraphHtml = new StoryGraphHtml(cachePath, null);
         lastBooks
             .forEach(book -> {
                 BookModel model = modelFromBookInformation(book);
@@ -127,6 +129,12 @@ public class LastCommand implements Callable<Integer> {
                 if (grUrl != null) {
                     final BookModel grModel = goodreadsHtml.getBookModel(grUrl);
                     model = bookSchema.mergeModels(model, grModel);
+                }
+                if (model.getStorygraphUrl() == null) {
+                    final BookModel sgBook = storyGraphHtml.searchForBook(model);
+                    if (sgBook != null) {
+                        model = bookSchema.mergeModels(model, sgBook);
+                    }
                 }
                 bookStore.saveIfChanged(model);
                 sb.append(DocTabbed.fromBookModel(model)).append(CRLF);

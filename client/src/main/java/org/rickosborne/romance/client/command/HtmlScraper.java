@@ -18,6 +18,9 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -50,7 +53,7 @@ public class HtmlScraper {
         @NonNull final URL url,
         @NonNull final Path cachePath
     ) {
-        return forUrlWithDelay(url, cachePath, null, null);
+        return forUrlWithDelay(url, cachePath, null, null, null);
     }
 
     public static HtmlScraper forUrlWithCookies(
@@ -58,14 +61,23 @@ public class HtmlScraper {
         @NonNull final Path cachePath,
         @NonNull final JsonCookieStore cookieStore
     ) {
-        return forUrlWithDelay(url, cachePath, null, cookieStore);
+        return forUrlWithDelay(url, cachePath, null, cookieStore, null);
+    }
+
+    public static HtmlScraper forUrlWithHeaders(
+        @NonNull final URL url,
+        @NonNull final Path cachePath,
+        @NonNull final Map<String, String> headers
+    ) {
+        return forUrlWithDelay(url, cachePath, null, null, headers);
     }
 
     public static HtmlScraper forUrlWithDelay(
         @NonNull final URL url,
         @NonNull final Path cachePath,
         final Integer delay,
-        final JsonCookieStore cookieStore
+        final JsonCookieStore cookieStore,
+        final Map<String, String> headers
     ) {
         try {
             final Document cachedDoc = fromCache(url, cachePath);
@@ -77,6 +89,7 @@ public class HtmlScraper {
             }
             final Document liveDoc = Jsoup.connect(url.toString())
                 .cookieStore(cookieStore)
+                .headers(Optional.ofNullable(headers).orElseGet(Collections::emptyMap))
                 .timeout(TIMEOUT_MS)
                 .get();
             final String fileName = StringStuff.cacheName(url) + HTML_FILE_EXTENSION;

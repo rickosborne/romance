@@ -17,6 +17,7 @@ import lombok.Value;
 import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
+import org.rickosborne.romance.client.html.StoryGraphHtml;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.json.JsonStore;
 import org.rickosborne.romance.db.json.JsonStoreFactory;
@@ -65,6 +66,8 @@ public abstract class ASheetCommand implements Callable<Integer> {
     private final NamingConvention namingConvention = new NamingConvention();
     @Getter(lazy = true)
     private final JsonStoreFactory jsonStoreFactory = buildJsonStoreFactory();
+    @Getter(lazy = true)
+    private final StoryGraphHtml storyGraphHtml = new StoryGraphHtml(getCachePath(), null);
     @Getter(value = AccessLevel.PROTECTED)
     @CommandLine.Option(names = {"--userid", "-u"}, description = "Google User ID/email", required = true)
     private String userId;

@@ -10,6 +10,7 @@ import org.rickosborne.romance.util.StringStuff;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -38,7 +39,7 @@ public class GoodreadsHtml {
     private final Path cachePath;
 
     public BookModel getBookModel(@NonNull final URL url) {
-        final HtmlScraper scraper = HtmlScraper.forUrlWithDelay(url, cachePath, DELAY_MS, null);
+        final HtmlScraper scraper = HtmlScraper.forUrlWithDelay(url, cachePath, DELAY_MS, null, null);
         final BookModel book = BookModel.build();
         for (final BookPage value : BookPage.values()) {
             value.findAndSet(book, scraper);
@@ -52,7 +53,7 @@ public class GoodreadsHtml {
         goodreadsUrl((b, u) -> b.setGoodreadsUrl(StringStuff.urlFromString(u)), "link[rel=canonical]", "href"),
         imageUrl((b, u) -> b.setImageUrl(StringStuff.urlFromString(u)), "meta[property=og:image]", "content"),
         imageUrlTwitter((b, u) -> b.setImageUrl(StringStuff.urlFromString(u)), "meta[property=twitter:image]", "content"),
-        isbn(BookModel::setIsbn, "meta[property=books:isbn]", "content"),
+        isbn((b, i) -> Optional.ofNullable(i).filter(v -> !"null".equals(v)).ifPresent(b::setIsbn), "meta[property=books:isbn]", "content"),
         pages((b, p) -> b.setPages(Integer.parseInt(p, 10)), "meta[property=books:page_count]", "content"),
         pagesDetails((b, p) -> b.setPages(Integer.parseInt(p, 10)), "#details [itemprop=numberOfPages]", s -> s.getHtml().replace(" pages", "")),
         authorName(BookModel::setAuthorName, "#bookAuthors .authorName [itemprop=name]:first-of-type", HtmlScraper::getText),

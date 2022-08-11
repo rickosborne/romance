@@ -74,6 +74,7 @@ public class DocTabbed {
             .publisher(book.getPublisherName())
             .purchased(Optional.ofNullable(book.getDatePurchase()).map(d -> d.atStartOfDay().toInstant(ZoneOffset.UTC)).orElse(null))
             .read(Boolean.TRUE.equals(book.getDnf()) ? "DNF" : Optional.ofNullable(book.getDateRead()).map(d -> d.format(DateTimeFormatter.ISO_LOCAL_DATE)).orElse(null))
+            .sgUrl(book.getStorygraphUrl())
             .build();
     }
 
@@ -106,6 +107,7 @@ public class DocTabbed {
     private final String publisher;
     private final Instant purchased;
     private final String read;
+    private final URL sgUrl;
     private final String title;
 
     public DocTabbed merge(final DocTabbed other) {
@@ -146,6 +148,7 @@ public class DocTabbed {
         columns.add(""); // rick review
         columns.add(emptyIfNull(imageUrl));
         columns.add(emptyIfNull(isbn));
+        columns.add(emptyIfNull(sgUrl));
         return String.join("\t", columns);
     }
 }

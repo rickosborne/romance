@@ -4,6 +4,7 @@ import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
 import com.google.api.services.sheets.v4.model.Request;
 import lombok.extern.java.Log;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
+import org.rickosborne.romance.client.html.StoryGraphHtml;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
@@ -28,6 +29,7 @@ public class FillFromTABSCommand extends ASheetCommand {
     @Override
     protected Integer doWithSheets() {
         final AudiobookStoreHtml audiobookStoreHtml = getAudiobookStoreHtml();
+        final StoryGraphHtml storyGraphHtml = getStoryGraphHtml();
         final List<Request> changeRequests = new LinkedList<>();
         final DataSet<BookModel> bookData = new DataSet<>(DbModel.Book);
         final DataSet<AuthorModel> authorData = new DataSet<>(DbModel.Author);
@@ -39,9 +41,10 @@ public class FillFromTABSCommand extends ASheetCommand {
                 continue;
             }
             final BookModel tabsBook = audiobookStoreHtml.getBookModel(tabsUrl);
-            final BookModel sheetPlusTabs = bookData.getModelSchema().mergeModels(tabsBook, sheetBook);
-            final BookModel jsonBook = bookData.getJsonStore().findLikeFromCache(sheetPlusTabs);
-            final BookModel allBook = bookData.getModelSchema().mergeModels(jsonBook, sheetPlusTabs);
+            final BookModel plusTABS = bookData.getModelSchema().mergeModels(tabsBook, sheetBook);
+            final BookModel plusSG = bookData.getModelSchema().mergeModels(plusTABS, storyGraphHtml.searchForBook(plusTABS));
+            final BookModel jsonBook = bookData.getJsonStore().findLikeFromCache(plusTABS);
+            final BookModel allBook = bookData.getModelSchema().mergeModels(jsonBook, plusSG);
             final Map<String, String> bookChanges = bookData.getModelSheetAdapter().findChangesToSheet(sheetBook, allBook);
             if (!bookChanges.isEmpty()) {
                 System.out.println("~~~ " + rowNum + ":" + bookData.getJsonStore().idFromModel(allBook));
