@@ -16,6 +16,7 @@ import lombok.NonNull;
 import lombok.Value;
 import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.NamingConvention;
+import org.rickosborne.romance.client.JsonCookieStore;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.client.html.StoryGraphHtml;
 import org.rickosborne.romance.db.DbModel;
@@ -26,6 +27,7 @@ import org.rickosborne.romance.db.sheet.SheetStore;
 import org.rickosborne.romance.db.sheet.SheetStoreFactory;
 import org.rickosborne.romance.sheet.AdapterFactory;
 import org.rickosborne.romance.sheet.ModelSheetAdapter;
+import org.rickosborne.romance.util.Once;
 import org.rickosborne.romance.util.StringStuff;
 import picocli.CommandLine;
 
@@ -59,9 +61,21 @@ public abstract class ASheetCommand implements Callable<Integer> {
     private final Map<String, Function<String, Object>> coerceFieldFunctions = Map.of(
         "isbn", s -> s
     );
+    @SuppressWarnings("unused")
+    @Getter(value = AccessLevel.PROTECTED)
+    @CommandLine.Option(names = {"--cookies", "-s"}, description = "Path to cookie store", defaultValue = "./.credentials/abs-cookies.json")
+    private Path cookieStorePath;
     @Getter(value = AccessLevel.PROTECTED)
     @CommandLine.Option(names = {"--path", "-p"}, description = "Path to DB dir", defaultValue = "book-data")
     private Path dbPath;
+    @Getter(value = AccessLevel.PROTECTED, lazy = true)
+    private final JsonCookieStore jsonCookieStore = Once.supply(() -> {
+        final Path cookieStorePath = getCookieStorePath();
+        if (cookieStorePath == null || !cookieStorePath.toFile().isFile()) {
+            throw new IllegalArgumentException("Invalid cookie store path");
+        }
+        return JsonCookieStore.fromPath(cookieStorePath);
+    });
     @Getter(value = AccessLevel.PROTECTED, lazy = true)
     private final NamingConvention namingConvention = new NamingConvention();
     @Getter(lazy = true)
