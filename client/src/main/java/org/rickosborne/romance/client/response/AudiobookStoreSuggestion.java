@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import org.rickosborne.romance.AudiobookStore;
+import org.rickosborne.romance.util.BookStuff;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -29,7 +30,7 @@ public class AudiobookStoreSuggestion {
     String urlPath;
 
     public String getCleanTitle() {
-        return title == null ? null : title.replace(" (Unabridged)", "");
+        return BookStuff.cleanTitle(title);
     }
 
     public URL getUrl() {

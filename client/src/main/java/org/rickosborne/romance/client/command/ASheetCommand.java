@@ -27,6 +27,7 @@ import org.rickosborne.romance.db.sheet.SheetStore;
 import org.rickosborne.romance.db.sheet.SheetStoreFactory;
 import org.rickosborne.romance.sheet.AdapterFactory;
 import org.rickosborne.romance.sheet.ModelSheetAdapter;
+import org.rickosborne.romance.util.BookBot;
 import org.rickosborne.romance.util.Once;
 import org.rickosborne.romance.util.StringStuff;
 import picocli.CommandLine;
@@ -91,10 +92,16 @@ public abstract class ASheetCommand implements Callable<Integer> {
     private final Sheets.Spreadsheets spreadsheets = BooksSheets.getSpreadsheets(getUserId());
     @Getter(lazy = true)
     private final Spreadsheet spreadsheet = BooksSheets.getSpreadsheet(getSpreadsheets());
+    @Getter(lazy = true)
+    private final BookBot bookBot = buildBookBot();
     @Getter(value = AccessLevel.PROTECTED)
     @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
     @CommandLine.Option(names = {"--write", "-w"}, description = "Write changes back to the spreadsheet")
     private boolean write = false;
+
+    private BookBot buildBookBot() {
+        return new BookBot(getAuth(), getCachePath(), getCookieStorePath(), getDbPath(), getUserId());
+    }
 
     private JsonStoreFactory buildJsonStoreFactory() {
         return new JsonStoreFactory(getDbPath(), getNamingConvention());

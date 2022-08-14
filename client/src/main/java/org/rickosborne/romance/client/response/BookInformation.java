@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
 import lombok.ToString;
+import org.rickosborne.romance.util.BookStuff;
 
 import java.net.URL;
 import java.time.Instant;
@@ -72,7 +73,7 @@ public class BookInformation {
 
     @JsonIgnore
     public String getCleanTitle() {
-        return title == null ? null : title.replace(" (Unabridged)", "");
+        return BookStuff.cleanTitle(title);
     }
 
     @JsonIgnore

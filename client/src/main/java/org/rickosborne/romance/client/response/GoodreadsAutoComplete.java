@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import org.rickosborne.romance.Goodreads;
+import org.rickosborne.romance.util.BookStuff;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -39,5 +40,9 @@ public class GoodreadsAutoComplete {
         } catch (MalformedURLException e) {
             return null;
         }
+    }
+
+    public String getCleanTitle() {
+        return BookStuff.cleanTitle(title);
     }
 }

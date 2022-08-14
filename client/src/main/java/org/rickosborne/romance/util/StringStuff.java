@@ -47,6 +47,30 @@ public class StringStuff {
         return t != null && !t.isBlank();
     }
 
+    public static String nullIfBlank(final String s) {
+        return s == null || s.isBlank() ? null : s;
+    }
+
+    public static boolean fuzzyMatch(final String a, final String b) {
+        if (a == null || b == null) {
+            return false;
+        }
+        if (a.equals(b)) {
+            return true;
+        }
+        return Objects.equals(alphaOnly(a), alphaOnly(b));
+    }
+
+    public static String alphaOnly(final String s) {
+        if (s == null) {
+            return null;
+        }
+        return s
+            .toLowerCase()
+            .replace("'", "")
+            .replaceAll("[^a-z\\d]+", " ");
+    }
+
     @SafeVarargs
     public static <T, V> BiConsumer<T, V> setButNot(final BiConsumer<T, V> downstream, @NonNull final V... avoid) {
         return (t, v) -> {

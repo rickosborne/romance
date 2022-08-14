@@ -16,6 +16,7 @@ import org.rickosborne.romance.client.command.HtmlScraper;
 import org.rickosborne.romance.db.DbJsonWriter;
 import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
+import org.rickosborne.romance.util.BookStuff;
 import org.rickosborne.romance.util.BrowserStuff;
 import org.rickosborne.romance.util.StringStuff;
 
@@ -33,6 +34,7 @@ import java.util.function.Function;
 import static org.rickosborne.romance.AudiobookStore.DELAY_MS;
 import static org.rickosborne.romance.AudiobookStore.MY_LIBRARY_URL;
 import static org.rickosborne.romance.util.MathStuff.doubleFromDuration;
+import static org.rickosborne.romance.util.ModelSetter.setIfEmpty;
 import static org.rickosborne.romance.util.StringStuff.setButNot;
 import static org.rickosborne.romance.util.StringStuff.urlFromString;
 
@@ -202,9 +204,12 @@ public class AudiobookStoreHtml {
         DatePublished("/mainEntity/datePublished", (b, d) -> b.setDatePublish(StringStuff.toLocalDate(d))),
         Duration("/mainEntity/timeRequired", (b, t) -> b.setDurationHours(doubleFromDuration(t))),
         Publisher("/mainEntity/publisher/name", BookModel::setPublisherName),
+        PublisherDescription("/mainEntity/description", setIfEmpty(BookModel::setPublisherDescription, BookModel::getPublisherDescription)),
         Image("/mainEntity/image", (b, i) -> b.setImageUrl(urlFromString(i.replace("-square-400", "-square-1536")))),
         Gtin13("/mainEntity/gtin13", setButNot(BookModel::setIsbn, "null", "")),
         Isbn2("/mainEntity/isbn", setButNot(BookModel::setIsbn, "null", "")),
+        Title("/mainEntity/name", setIfEmpty((b, t) -> b.setTitle(BookStuff.cleanTitle(t)), BookModel::getTitle)),
+        Sku("/mainEntity/sku", BookModel::setAudiobookStoreSku),
         ;
         private final String ldPath;
         private final BiConsumer<BookModel, String> setter;

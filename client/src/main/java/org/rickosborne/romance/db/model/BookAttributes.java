@@ -13,6 +13,7 @@ import java.util.function.Function;
 import static org.rickosborne.romance.util.StringStuff.setButNot;
 
 public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
+    audiobookStoreSku(BookModel::getAudiobookStoreSku, BookModel::setAudiobookStoreSku, String.class),
     audiobookStoreUrl(BookModel::getAudiobookStoreUrl, BookModel::setAudiobookStoreUrl, URL.class),
     authorName(BookModel::getAuthorName, BookModel::setAuthorName, String.class),
     breakup(BookModel::getBreakup, BookModel::setBreakup, String.class),
@@ -38,6 +39,7 @@ public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
     pages(BookModel::getPages, BookModel::setPages, Integer.class),
     pairing(BookModel::getPairing, BookModel::setPairing, String.class),
     pov(BookModel::getPov, BookModel::setPov, String.class),
+    publisherDescription(BookModel::getPublisherDescription, BookModel::setPublisherDescription, String.class),
     publisherName(BookModel::getPublisherName, BookModel::setPublisherName, String.class),
     ratings(BookModel::getRatings, null, Map.class),
     reading(BookModel::getReading, BookModel::setReading, Boolean.class),

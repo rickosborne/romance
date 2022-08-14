@@ -64,14 +64,6 @@ public class HtmlScraper {
         return forUrlWithDelay(url, cachePath, null, cookieStore, null);
     }
 
-    public static HtmlScraper forUrlWithHeaders(
-        @NonNull final URL url,
-        @NonNull final Path cachePath,
-        @NonNull final Map<String, String> headers
-    ) {
-        return forUrlWithDelay(url, cachePath, null, null, headers);
-    }
-
     public static HtmlScraper forUrlWithDelay(
         @NonNull final URL url,
         @NonNull final Path cachePath,
@@ -87,6 +79,7 @@ public class HtmlScraper {
             if (delay != null) {
                 Thread.sleep(delay);
             }
+            log.info("Fetch: " + url);
             final Document liveDoc = Jsoup.connect(url.toString())
                 .cookieStore(cookieStore)
                 .headers(Optional.ofNullable(headers).orElseGet(Collections::emptyMap))
@@ -102,6 +95,14 @@ public class HtmlScraper {
         }
     }
 
+    public static HtmlScraper forUrlWithHeaders(
+        @NonNull final URL url,
+        @NonNull final Path cachePath,
+        @NonNull final Map<String, String> headers
+    ) {
+        return forUrlWithDelay(url, cachePath, null, null, headers);
+    }
+
     protected static Document fromCache(@NonNull final URL url, @NonNull final Path cachePath) {
         final String fileName = StringStuff.cacheName(url) + HTML_FILE_EXTENSION;
         final File file = cachePath.resolve(fileName).toFile();
@@ -110,6 +111,7 @@ public class HtmlScraper {
         }
         if (file.isFile()) {
             try {
+                log.info("Cached: " + url);
                 return Jsoup.parse(file);
             } catch (IOException e) {
                 log.warning("Could not parse: " + file + "; " + e.getMessage());
@@ -152,6 +154,10 @@ public class HtmlScraper {
             return null;
         }
         return element.text();
+    }
+
+    public boolean isEmpty() {
+        return element == null;
     }
 
     public HtmlScraper parentHas(@NonNull final String selector) {

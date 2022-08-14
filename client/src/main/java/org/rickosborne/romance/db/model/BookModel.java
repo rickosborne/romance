@@ -25,6 +25,7 @@ public class BookModel {
         return BookModel.builder().build();
     }
 
+    private String audiobookStoreSku;
     private URL audiobookStoreUrl;
     private String authorName;
     private String breakup;
@@ -50,6 +51,7 @@ public class BookModel {
     private Integer pages;
     private String pairing;
     private String pov;
+    private String publisherDescription;
     private String publisherName;
     @JsonPropertyOrder(alphabetic = true)
     private final Map<BookRating, Double> ratings = new TreeMap<>();

@@ -84,6 +84,7 @@ public class BookMerger {
         return BookModel.builder()
             .title(suggestion.getCleanTitle())
             .audiobookStoreUrl(suggestion.getUrl())
+            .audiobookStoreSku(suggestion.getKeyId())
             .build();
     }
 
@@ -100,6 +101,7 @@ public class BookMerger {
             .durationHours(info.getRuntimeHours())
             .title(info.getCleanTitle())
             .audiobookStoreUrl(info.getUrl())
+            .audiobookStoreSku(info.getSku())
             .build();
     }
 
@@ -112,7 +114,7 @@ public class BookMerger {
             .goodreadsUrl(ac.getFullBookUrl())
             .imageUrl(ac.getImageUrl())
             .pages(ac.getNumPages())
-            .title(ac.getTitle())
+            .title(ac.getCleanTitle())
             .build();
     }
 

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
 import org.rickosborne.romance.client.command.HtmlScraper;
 import org.rickosborne.romance.db.model.BookModel;
+import org.rickosborne.romance.util.BookStuff;
 import org.rickosborne.romance.util.StringStuff;
 
 import java.net.URL;
@@ -15,6 +16,7 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.rickosborne.romance.util.ModelSetter.setIfEmpty;
 import static org.rickosborne.romance.util.StringStuff.setButNot;
 
 @Log
@@ -49,15 +51,16 @@ public class GoodreadsHtml {
     }
 
     public enum BookPage {
-        title(BookModel::setTitle, "meta[property=og:title]", "content"),
-        titleLonger(BookModel::setTitle, "#bookTitle", HtmlScraper::getText),
+        title((b, t) -> b.setTitle(BookStuff.cleanTitle(t)), "meta[property=og:title]", "content"),
+        titleLonger((b, t) -> b.setTitle(BookStuff.cleanTitle(t)), "#bookTitle", HtmlScraper::getText),
         goodreadsUrl((b, u) -> b.setGoodreadsUrl(StringStuff.urlFromString(u)), "link[rel=canonical]", "href"),
         imageUrl((b, u) -> b.setImageUrl(StringStuff.urlFromString(u)), "meta[property=og:image]", "content"),
         imageUrlTwitter((b, u) -> b.setImageUrl(StringStuff.urlFromString(u)), "meta[property=twitter:image]", "content"),
         isbn(setButNot(BookModel::setIsbn, "null", ""), "meta[property=books:isbn]", "content"),
         pages((b, p) -> b.setPages(Integer.parseInt(p, 10)), "meta[property=books:page_count]", "content"),
         pagesDetails((b, p) -> b.setPages(Integer.parseInt(p, 10)), "#details [itemprop=numberOfPages]", s -> s.getHtml().replace(" pages", "")),
-        authorName(BookModel::setAuthorName, "#bookAuthors .authorName [itemprop=name]:first-of-type", HtmlScraper::getText),
+        publisherDescription(setIfEmpty(BookModel::setPublisherDescription, BookModel::getPublisherDescription), "#description span[style]", HtmlScraper::getText),
+        authorName(BookModel::setAuthorName, "#bookAuthors .authorName__container:first-of-type .authorName [itemprop=name]:first-of-type", HtmlScraper::getText),
         seriesName(BookModel::setSeriesName, "#bookSeries a", h -> {
             final String nameAndPart = h.getText();
             if (nameAndPart == null) {
@@ -124,6 +127,9 @@ public class GoodreadsHtml {
 
         public void findAndSet(@NonNull final BookModel book, @NonNull final HtmlScraper scraper) {
             final HtmlScraper localScraper = scraper.selectOne(selector);
+            if (localScraper.isEmpty()) {
+                return;
+            }
             try {
                 final String text = stringifier.apply(localScraper);
                 if (text != null && !text.isBlank()) {
