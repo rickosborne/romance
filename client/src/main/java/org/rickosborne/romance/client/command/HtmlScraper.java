@@ -4,10 +4,12 @@ import lombok.AccessLevel;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.rickosborne.romance.StoryGraph;
 import org.rickosborne.romance.client.JsonCookieStore;
 import org.rickosborne.romance.util.StringStuff;
 
@@ -28,7 +30,7 @@ import java.util.function.Predicate;
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class HtmlScraper {
     public static final String HTML_FILE_EXTENSION = ".html";
-    public static final int TIMEOUT_MS = 5000;
+    public static final int TIMEOUT_MS = 9000;
 
     public static void expire(
         @NonNull final URL url,
@@ -66,18 +68,20 @@ public class HtmlScraper {
 
     public static HtmlScraper forUrlWithDelay(
         @NonNull final URL url,
-        @NonNull final Path cachePath,
+        final Path cachePath,
         final Integer delay,
         final JsonCookieStore cookieStore,
         final Map<String, String> headers
     ) {
         try {
-            final Document cachedDoc = fromCache(url, cachePath);
-            if (cachedDoc != null) {
-                return new HtmlScraper(cachePath, cookieStore, cachedDoc);
-            }
-            if (delay != null) {
-                Thread.sleep(delay);
+            if (cachePath != null) {
+                final Document cachedDoc = fromCache(url, cachePath);
+                if (cachedDoc != null) {
+                    return new HtmlScraper(cachePath, cookieStore, cachedDoc);
+                }
+                if (delay != null) {
+                    Thread.sleep(delay);
+                }
             }
             log.info("Fetch: " + url);
             final Document liveDoc = Jsoup.connect(url.toString())
@@ -85,9 +89,11 @@ public class HtmlScraper {
                 .headers(Optional.ofNullable(headers).orElseGet(Collections::emptyMap))
                 .timeout(TIMEOUT_MS)
                 .get();
-            final String fileName = StringStuff.cacheName(url) + HTML_FILE_EXTENSION;
-            try (final FileWriter fw = new FileWriter(cachePath.resolve(fileName).toFile())) {
-                fw.write(liveDoc.outerHtml());
+            if (cachePath != null) {
+                final String fileName = StringStuff.cacheName(url) + HTML_FILE_EXTENSION;
+                try (final FileWriter fw = new FileWriter(cachePath.resolve(fileName).toFile())) {
+                    fw.write(liveDoc.outerHtml());
+                }
             }
             return new HtmlScraper(cachePath, cookieStore, liveDoc);
         } catch (IOException | InterruptedException e) {
@@ -120,6 +126,24 @@ public class HtmlScraper {
         return null;
     }
 
+    public static Document postFormEncoded(
+        @NonNull final String url,
+        @NonNull final RequestExtras requestExtras
+    ) {
+        try {
+            return Jsoup.connect(url)
+                .timeout(StoryGraph.DELAY_MS)
+                .headers(requestExtras.getRequestHeaders())
+                .method(Connection.Method.POST)
+                .data(requestExtras.getRequestBodyData())
+                .followRedirects(false)
+                .cookies(requestExtras.getCookies())
+                .post();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private final Path cachePath;
     private final JsonCookieStore cookieStore;
     private final Element element;
@@ -147,6 +171,13 @@ public class HtmlScraper {
             return null;
         }
         return element.ownText();
+    }
+
+    public Connection.Response getResponse() {
+        if (element instanceof Document) {
+            return ((Document) element).connection().response();
+        }
+        return null;
     }
 
     public String getText() {
@@ -187,6 +218,18 @@ public class HtmlScraper {
         }
     }
 
+    public HtmlScraper selectFirst(@NonNull final String selector) {
+        if (element == null) {
+            return this;
+        }
+        final Elements elements = element.select(selector);
+        if (elements.isEmpty()) {
+            return empty();
+        } else {
+            return new HtmlScraper(cachePath, cookieStore, elements.first());
+        }
+    }
+
     public HtmlScraper selectOne(@NonNull final String selector) {
         if (element == null) {
             return this;
@@ -214,5 +257,19 @@ public class HtmlScraper {
             .findFirst()
             .orElse(null);
         return new HtmlScraper(cachePath, cookieStore, nextElement);
+    }
+
+    public static interface RequestExtras {
+        default Map<String, String> getCookies() {
+            return Collections.emptyMap();
+        }
+
+        default Map<String, String> getRequestBodyData() {
+            return Collections.emptyMap();
+        }
+
+        default Map<String, String> getRequestHeaders() {
+            return Collections.emptyMap();
+        }
     }
 }

@@ -7,6 +7,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.java.Log;
 import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.client.AudiobookStoreService;
@@ -15,12 +16,12 @@ import org.rickosborne.romance.client.CacheClient;
 import org.rickosborne.romance.client.GoodreadsService;
 import org.rickosborne.romance.client.JsonCookieStore;
 import org.rickosborne.romance.client.command.AudiobookStoreAuthOptions;
+import org.rickosborne.romance.client.command.BookMerger;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.client.html.GoodreadsHtml;
 import org.rickosborne.romance.client.html.StoryGraphHtml;
-import org.rickosborne.romance.client.response.AudiobookStoreSuggestion;
 import org.rickosborne.romance.client.response.BookInformation;
-import org.rickosborne.romance.client.response.GoodreadsAutoComplete;
+import org.rickosborne.romance.client.response.UserInformation2;
 import org.rickosborne.romance.db.json.JsonStore;
 import org.rickosborne.romance.db.json.JsonStoreFactory;
 import org.rickosborne.romance.db.model.BookModel;
@@ -28,16 +29,20 @@ import org.rickosborne.romance.db.model.BookSchema;
 import org.rickosborne.romance.db.sheet.SheetStoreFactory;
 import org.rickosborne.romance.sheet.AdapterFactory;
 
+import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
-import static org.rickosborne.romance.client.command.BookMerger.modelFromAudiobookStoreSuggestion;
 import static org.rickosborne.romance.client.command.BookMerger.modelFromBookInformation;
-import static org.rickosborne.romance.client.command.BookMerger.modelFromGoodreadsAutoComplete;
+import static org.rickosborne.romance.util.StringStuff.fuzzyListMatch;
 import static org.rickosborne.romance.util.StringStuff.fuzzyMatch;
 
+@Log
 @Getter
 @RequiredArgsConstructor
 public class BookBot {
@@ -82,6 +87,8 @@ public class BookBot {
     private final JsonStoreFactory jsonStoreFactory = buildJsonStoreFactory();
     @Getter(lazy = true)
     private final JsonStore<BookModel> bookStore = getJsonStoreFactory().buildJsonStore(BookModel.class);
+    @Getter(value = AccessLevel.PROTECTED, lazy = true)
+    private final JsonCookieStore sgCookieStore = buildStoryGraphCookieStore();
     @Getter(lazy = true)
     private final SheetStoreFactory sheetStoreFactory = buildSheetStoreFactory();
     @Getter(lazy = true)
@@ -89,7 +96,9 @@ public class BookBot {
     @Getter(lazy = true)
     private final Spreadsheet spreadsheet = BooksSheets.getSpreadsheet(getSpreadsheets());
     @Getter(lazy = true)
-    private final StoryGraphHtml storyGraphHtml = new StoryGraphHtml(getCachePath(), null);
+    private final StoryGraphHtml storyGraphHtml = buildStoryGraphHtml();
+    @Getter(lazy = true)
+    private final List<BookModel> tabsAudiobooks = fetchAudiobooks();
 
     private JsonStoreFactory buildJsonStoreFactory() {
         return new JsonStoreFactory(getDbPath(), getNamingConvention());
@@ -99,11 +108,20 @@ public class BookBot {
         return new SheetStoreFactory(getNamingConvention(), getGoogleUserId());
     }
 
+    private JsonCookieStore buildStoryGraphCookieStore() {
+        return JsonCookieStore.fromPath(Path.of("./.credentials/storygraph-cookies.json"));
+    }
+
+    private StoryGraphHtml buildStoryGraphHtml() {
+        return new StoryGraphHtml(getCachePath(), getSgCookieStore());
+    }
+
     public BookModel extendAll(
         @NonNull final BookModel original
     ) {
         BookModel model = original;
-        final BookModel existing = getBookStore().findLikeOrMatch(model, found -> fuzzyMatch(found.getTitle(), original.getTitle()) && fuzzyMatch(found.getAuthorName(), original.getAuthorName()));
+        model = extendWithAudiobookStorePurchase(model);
+        final BookModel existing = getBookStore().findLikeOrMatch(model, found -> fuzzyMatch(found.getTitle(), original.getTitle()) && fuzzyListMatch(found.getAuthorName(), original.getAuthorName()));
         model = mergeBooks(existing, model);
         model = extendWithAudiobookStoreBookInformation(model);
         model = extendWithAudiobookStoreSuggestion(model);
@@ -117,14 +135,7 @@ public class BookBot {
     public BookModel extendWithAudiobookStoreBookInformation(
         @NonNull final BookModel original
     ) {
-        final String sku = original.getAudiobookStoreSku();
-        final String userGuid = Optional.ofNullable(getAudiobookStoreUserGuid()).map(UUID::toString).orElse(null);
-        if (userGuid == null || sku == null) {
-            return original;
-        }
-        final BookInformation info2 = getAudiobookStoreCache().fetchFomCache(new TypeReference<>() {
-        }, s -> s.bookInformation(userGuid, sku), userGuid + sku);
-        return mergeBooks(original, modelFromBookInformation(info2));
+        return mergeBooks(original, fetchAudiobookStoreBookInformation(original));
     }
 
     public BookModel extendWithAudiobookStoreDetails(
@@ -138,15 +149,40 @@ public class BookBot {
         return mergeBooks(original, storeBook);
     }
 
+    public BookModel extendWithAudiobookStorePurchase(
+        @NonNull final BookModel original
+    ) {
+        final List<BookModel> audiobooks = getTabsAudiobooks();
+        final BookModel purchased = audiobooks.stream()
+            .filter(a -> fuzzyListMatch(a.getAuthorName(), original.getAuthorName()) && fuzzyMatch(a.getTitle(), original.getTitle()))
+            .findAny()
+            .orElse(null);
+        return mergeBooks(original, purchased);
+    }
+
     public BookModel extendWithAudiobookStoreSuggestion(
         @NonNull final BookModel original
     ) {
-        if (original.getAudiobookStoreUrl() != null) {
+        final URL originalUrl = original.getAudiobookStoreUrl();
+        if (originalUrl != null) {
             return original;
         }
-        final AudiobookStoreSuggestion suggestion = getAudiobookStoreSuggestService().findBookLike(original);
+        final String originalSku = original.getAudiobookStoreSku();
+        final BookModel suggestion = getAudiobookStoreSuggestService().findBookLike(original, book -> {
+            final BookModel info = fetchAudiobookStoreBookInformation(book);
+            if (info == null) {
+                return null;
+            }
+            if ((originalSku == null || originalSku.equals(info.getAudiobookStoreSku()))
+                && fuzzyListMatch(original.getAuthorName(), info.getAuthorName())
+                && fuzzyMatch(original.getTitle(), info.getTitle())
+            ) {
+                return mergeBooks(book, info);
+            }
+            return null;
+        });
         if (suggestion != null) {
-            return mergeBooks(original, modelFromAudiobookStoreSuggestion(suggestion));
+            return mergeBooks(original, suggestion);
         }
         return original;
     }
@@ -157,9 +193,11 @@ public class BookBot {
         if (original.getGoodreadsUrl() != null) {
             return original;
         }
-        final GoodreadsAutoComplete grBook = getGoodreadsService().findBook(original.getTitle(), original.getAuthorName());
+
+        final BookModel grBook = getGoodreadsService()
+            .findBook(original.getTitle(), original.getAuthorName());
         if (grBook != null) {
-            return mergeBooks(original, modelFromGoodreadsAutoComplete(grBook));
+            return mergeBooks(original, grBook);
         }
         return original;
     }
@@ -183,6 +221,34 @@ public class BookBot {
         }
         final BookModel sgBook = getStoryGraphHtml().searchForBook(original);
         return mergeBooks(original, sgBook);
+    }
+
+    public BookModel fetchAudiobookStoreBookInformation(@NonNull final BookModel original) {
+        final String sku = original.getAudiobookStoreSku();
+        final String userGuid = Optional.ofNullable(getAudiobookStoreUserGuid()).map(UUID::toString).orElse(null);
+        if (userGuid == null || sku == null) {
+            return null;
+        }
+        final BookInformation info2 = getAudiobookStoreCache().fetchFomCache(new TypeReference<>() {
+        }, s -> s.bookInformation(userGuid, sku), userGuid + sku);
+        return info2 == null ? null : modelFromBookInformation(info2);
+    }
+
+    public List<BookModel> fetchAudiobooks() {
+        final AudiobookStoreService storeService = getAudiobookStoreCache().getService();
+        final AudiobookStoreAuthOptions storeAuth = getAuth();
+        storeAuth.ensureAuthGuid(storeService);
+        final UserInformation2 info;
+        try {
+            info = storeService.userInformation2(storeAuth.getAbsUserGuid().toString()).execute().body();
+            if (info == null) {
+                return Collections.emptyList();
+            }
+        } catch (IOException e) {
+            log.warning("Could not fetch TABS user info");
+            return Collections.emptyList();
+        }
+        return info.getAudiobooks().stream().map(BookMerger::modelFromBookInformation).collect(Collectors.toList());
     }
 
     public BookModel mergeBooks(

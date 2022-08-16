@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
+import lombok.extern.java.Log;
 import org.rickosborne.romance.db.DbJsonWriter;
 import org.rickosborne.romance.util.Pair;
 
@@ -16,10 +17,10 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.Comparator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Log
 @RequiredArgsConstructor
 public class JsonCookieStore implements CookieStore {
     public static JsonCookieStore fromPath(@NonNull final Path path) {
@@ -46,10 +47,9 @@ public class JsonCookieStore implements CookieStore {
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
-        final LinkedList<Pair<URI, HttpCookie>> updatedCookies = new LinkedList<>(cookies);
         cookies.removeIf(pair -> pair.getLeft().equals(shortUri) && pair.getRight().getName().equals(cookie.getName()));
-        updatedCookies.add(Pair.build(shortUri, cookie));
-        final List<SimpleCookie> simpleCookies = updatedCookies.stream().map(pair -> {
+        cookies.add(Pair.build(shortUri, cookie));
+        final List<SimpleCookie> simpleCookies = cookies.stream().map(pair -> {
                 final URI u = pair.getLeft();
                 final HttpCookie c = pair.getRight();
                 final URL url;
@@ -63,6 +63,7 @@ public class JsonCookieStore implements CookieStore {
             .sorted(Comparator.comparing(SimpleCookie::getUri).thenComparing(SimpleCookie::getName))
             .collect(Collectors.toList());
         try {
+            log.fine("Updating cookie store: " + storePath);
             DbJsonWriter.getJsonWriter().writeValue(storePath.toFile(), new SimpleStore(simpleCookies));
         } catch (IOException e) {
             throw new RuntimeException("Could not write cookieStore: " + storePath, e);
@@ -76,6 +77,13 @@ public class JsonCookieStore implements CookieStore {
             .filter(pair -> full.startsWith(pair.getLeft().toString()))
             .map(Pair::getRight)
             .collect(Collectors.toList());
+    }
+
+    public HttpCookie getByName(@NonNull final String name) {
+        return getCookies().stream()
+            .filter(c -> name.equals(c.getName()))
+            .findAny()
+            .orElse(null);
     }
 
     @Override

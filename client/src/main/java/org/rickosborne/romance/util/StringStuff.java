@@ -4,6 +4,8 @@ import lombok.NonNull;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -19,12 +21,50 @@ public class StringStuff {
     public static final Pattern ISO_DATE = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
     public static final Pattern NUMERIC = Pattern.compile("^[\\d,]+(?:\\.\\d*)?$");
 
+    public static String alphaOnly(final String s) {
+        if (s == null) {
+            return null;
+        }
+        return s
+            .toLowerCase()
+            .replace("'", "")
+            .replaceAll("[^a-z\\d]+", " ");
+    }
+
     public static String cacheName(@NonNull final URL url) {
         return String.join("-",
             DigestUtils.sha256Hex(url.toString()).substring(0, 8),
             url.getHost().replace("www.", ""),
             url.getPath().replaceAll("\\W+", "-")
         );
+    }
+
+    public static String ellipsize(final String s, final int maxLen) {
+        return s == null ? null : s.length() > maxLen ? s.substring(0, maxLen) : s;
+    }
+
+    public static boolean fuzzyListMatch(final String a, final String b) {
+        if (a == null || b == null) {
+            return false;
+        }
+        for (final String aItem : a.split(",")) {
+            for (final String bItem : b.split(",")) {
+                if (nonBlank(aItem) && nonBlank(bItem) && fuzzyMatch(aItem, bItem)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean fuzzyMatch(final String a, final String b) {
+        if (a == null || b == null) {
+            return false;
+        }
+        if (a.equals(b)) {
+            return true;
+        }
+        return Objects.equals(alphaOnly(a), alphaOnly(b));
     }
 
     public static boolean isBoolean(final String s) {
@@ -49,26 +89,6 @@ public class StringStuff {
 
     public static String nullIfBlank(final String s) {
         return s == null || s.isBlank() ? null : s;
-    }
-
-    public static boolean fuzzyMatch(final String a, final String b) {
-        if (a == null || b == null) {
-            return false;
-        }
-        if (a.equals(b)) {
-            return true;
-        }
-        return Objects.equals(alphaOnly(a), alphaOnly(b));
-    }
-
-    public static String alphaOnly(final String s) {
-        if (s == null) {
-            return null;
-        }
-        return s
-            .toLowerCase()
-            .replace("'", "")
-            .replaceAll("[^a-z\\d]+", " ");
     }
 
     @SafeVarargs
@@ -127,6 +147,17 @@ public class StringStuff {
             return text.toUpperCase();
         } else {
             return text.substring(0, 1).toUpperCase() + text.substring(1);
+        }
+    }
+
+    public static URI uriFromString(final String uri) {
+        if (uri == null || uri.isBlank()) {
+            return null;
+        }
+        try {
+            return new URI(uri);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
         }
     }
 

@@ -35,8 +35,8 @@ public class WishlistCommand extends ASheetCommand {
 
     @Override
     public Integer doWithSheets() {
-        final String absUsername = getAuth().getAbsUsername();
-        final String absPassword = getAuth().getAbsPassword();
+        final String absUsername = getTabsAuth().getAbsUsername();
+        final String absPassword = getTabsAuth().getAbsPassword();
         Objects.requireNonNull(absUsername, "TABS username is required.");
         Objects.requireNonNull(absPassword, "TABS password is required");
         final SheetStore<BookModel> sheetStore = getSheetStoreFactory().buildSheetStore(BookModel.class);

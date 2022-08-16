@@ -1,9 +1,10 @@
 package org.rickosborne.romance.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import lombok.NonNull;
 import org.rickosborne.romance.AudiobookStore;
+import org.rickosborne.romance.client.command.BookMerger;
 import org.rickosborne.romance.client.response.AudiobookStoreSuggestion;
-import org.rickosborne.romance.client.response.BookInformation;
 import org.rickosborne.romance.db.model.BookModel;
 import retrofit2.Call;
 import retrofit2.Retrofit;
@@ -13,6 +14,9 @@ import retrofit2.http.Query;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.UnaryOperator;
 
 import static org.rickosborne.romance.util.StringStuff.fuzzyMatch;
 import static org.rickosborne.romance.util.StringStuff.nullIfBlank;
@@ -35,27 +39,26 @@ public interface AudiobookStoreSuggestService {
         return new CacheClient<>(build(), CACHE_BASE_PATH, CACHE_NAME, DELAY_SECONDS);
     }
 
-    default AudiobookStoreSuggestion findBookLike(
-        final BookModel bookModel
+    default BookModel findBookLike(
+        final BookModel bookModel,
+        @NonNull final UnaryOperator<BookModel> filter
     ) {
         if (bookModel == null) {
             return null;
         }
-        return findBookLike(bookModel.getTitle(), bookModel.getAudiobookStoreSku());
+        final String sku = bookModel.getAudiobookStoreSku();
+        return findBookLike(bookModel.getTitle(), sku, book -> {
+            if (sku != null && sku.equals(book.getAudiobookStoreSku())) {
+                return book;
+            }
+            return filter.apply(book);
+        });
     }
 
-    default AudiobookStoreSuggestion findBookLike(
-        final BookInformation info
-    ) {
-        if (info == null) {
-            return null;
-        }
-        return findBookLike(info.getCleanTitle(), info.getSku());
-    }
-
-    default AudiobookStoreSuggestion findBookLike(
+    default BookModel findBookLike(
         final String title,
-        final String audiobookStoreSku
+        final String audiobookStoreSku,
+        final UnaryOperator<BookModel> filter
     ) {
         if (title == null) {
             return null;
@@ -67,8 +70,12 @@ public interface AudiobookStoreSuggestService {
             return null;
         }
         final String sku = nullIfBlank(audiobookStoreSku);
+        final UnaryOperator<BookModel> filterBooks = Optional.ofNullable(filter).orElse(b -> b);
         return suggestions.stream()
             .filter(s -> (sku == null || sku.equals(s.getKeyId())) && (fuzzyMatch(lcTitle, s.getTitle()) || fuzzyMatch(lcTitle, s.getCleanTitle().toLowerCase())))
+            .map(BookMerger::modelFromAudiobookStoreSuggestion)
+            .map(filterBooks)
+            .filter(Objects::nonNull)
             .findAny()
             .orElse(null);
     }

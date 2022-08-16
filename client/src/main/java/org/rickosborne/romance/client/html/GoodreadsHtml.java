@@ -60,7 +60,7 @@ public class GoodreadsHtml {
         pages((b, p) -> b.setPages(Integer.parseInt(p, 10)), "meta[property=books:page_count]", "content"),
         pagesDetails((b, p) -> b.setPages(Integer.parseInt(p, 10)), "#details [itemprop=numberOfPages]", s -> s.getHtml().replace(" pages", "")),
         publisherDescription(setIfEmpty(BookModel::setPublisherDescription, BookModel::getPublisherDescription), "#description span[style]", HtmlScraper::getText),
-        authorName(BookModel::setAuthorName, "#bookAuthors .authorName__container:first-of-type .authorName [itemprop=name]:first-of-type", HtmlScraper::getText),
+        authorName(BookModel::setAuthorName, "#bookAuthors:first-of-type .authorName__container:first-of-type .authorName:first-of-type [itemprop=name]:first-of-type", HtmlScraper::getText),
         seriesName(BookModel::setSeriesName, "#bookSeries a", h -> {
             final String nameAndPart = h.getText();
             if (nameAndPart == null) {
@@ -83,7 +83,7 @@ public class GoodreadsHtml {
             }
             return null;
         }),
-        narratorName(BookModel::setNarratorName, "#bookAuthors .authorName.role", s -> {
+        narratorName(BookModel::setNarratorName, "#bookAuthors:first-of-type .authorName__container:last-of-type .authorName.role", s -> {
             if ("(Narrator)".equals(s.getHtml())) {
                 return s.parentHas(".authorName").selectOne("[itemprop=name]:first-of-type").getHtml();
             }
@@ -126,7 +126,7 @@ public class GoodreadsHtml {
         }
 
         public void findAndSet(@NonNull final BookModel book, @NonNull final HtmlScraper scraper) {
-            final HtmlScraper localScraper = scraper.selectOne(selector);
+            final HtmlScraper localScraper = scraper.selectFirst(selector);
             if (localScraper.isEmpty()) {
                 return;
             }

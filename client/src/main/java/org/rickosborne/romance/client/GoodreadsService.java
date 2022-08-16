@@ -2,8 +2,10 @@ package org.rickosborne.romance.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.rickosborne.romance.Goodreads;
+import org.rickosborne.romance.client.command.BookMerger;
 import org.rickosborne.romance.client.response.GoodreadsAuthor;
 import org.rickosborne.romance.client.response.GoodreadsAutoComplete;
+import org.rickosborne.romance.db.model.BookModel;
 import retrofit2.Call;
 import retrofit2.Retrofit;
 import retrofit2.converter.jackson.JacksonConverterFactory;
@@ -39,7 +41,7 @@ public interface GoodreadsService {
         @Query("q") String query
     );
 
-    default GoodreadsAutoComplete findBook(
+    default BookModel findBook(
         final String title,
         final String author
     ) {
@@ -61,6 +63,7 @@ public interface GoodreadsService {
                 final String b = Optional.ofNullable(c.getBookTitleBare()).map(String::toLowerCase).orElse(null);
                 return (lcTitle.equals(t) || lcTitle.equals(b)) && lcAuthor.equals(a);
             })
+            .map(BookMerger::modelFromGoodreadsAutoComplete)
             .findAny()
             .orElse(null);
     }

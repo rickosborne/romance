@@ -33,6 +33,7 @@ import java.util.function.Function;
 
 import static org.rickosborne.romance.AudiobookStore.DELAY_MS;
 import static org.rickosborne.romance.AudiobookStore.MY_LIBRARY_URL;
+import static org.rickosborne.romance.db.model.SchemaAttribute.earlierSameYear;
 import static org.rickosborne.romance.util.MathStuff.doubleFromDuration;
 import static org.rickosborne.romance.util.ModelSetter.setIfEmpty;
 import static org.rickosborne.romance.util.StringStuff.setButNot;
@@ -201,7 +202,7 @@ public class AudiobookStoreHtml {
     enum BookModelLD implements LinkedData<BookModel> {
         AuthorName("/mainEntity/author/name", BookModel::setAuthorName),
         NarratorName("/mainEntity/readBy/name", BookModel::setNarratorName),
-        DatePublished("/mainEntity/datePublished", (b, d) -> b.setDatePublish(StringStuff.toLocalDate(d))),
+        DatePublished("/mainEntity/datePublished", (b, d) -> b.setDatePublish(earlierSameYear(b.getDatePublish(), StringStuff.toLocalDate(d)))),
         Duration("/mainEntity/timeRequired", (b, t) -> b.setDurationHours(doubleFromDuration(t))),
         Publisher("/mainEntity/publisher/name", BookModel::setPublisherName),
         PublisherDescription("/mainEntity/description", setIfEmpty(BookModel::setPublisherDescription, BookModel::getPublisherDescription)),

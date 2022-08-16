@@ -51,9 +51,6 @@ public abstract class ASheetCommand implements Callable<Integer> {
     @Getter(lazy = true, value = AccessLevel.PROTECTED)
     private final AdapterFactory adapterFactory = new AdapterFactory();
     @Getter(value = AccessLevel.PROTECTED)
-    @CommandLine.Mixin
-    private AudiobookStoreAuthOptions auth;
-    @Getter(value = AccessLevel.PROTECTED)
     @CommandLine.Option(names = {"--cache", "-c"}, description = "Path to cache dir", defaultValue = ".cache/html")
     private Path cachePath;
     @Getter(lazy = true)
@@ -81,8 +78,16 @@ public abstract class ASheetCommand implements Callable<Integer> {
     private final NamingConvention namingConvention = new NamingConvention();
     @Getter(lazy = true)
     private final JsonStoreFactory jsonStoreFactory = buildJsonStoreFactory();
+    @Getter(value = AccessLevel.PROTECTED)
+    @CommandLine.Mixin
+    private StoryGraphAuthOptions sgAuth;
     @Getter(lazy = true)
-    private final StoryGraphHtml storyGraphHtml = new StoryGraphHtml(getCachePath(), null);
+    private final JsonCookieStore storyGraphCookies = JsonCookieStore.fromPath(Path.of("./.credentials/storygraph-cookies.json"));
+    @Getter(lazy = true)
+    private final StoryGraphHtml storyGraphHtml = buildStoryGraphHtml();
+    @Getter(value = AccessLevel.PROTECTED)
+    @CommandLine.Mixin
+    private AudiobookStoreAuthOptions tabsAuth;
     @Getter(value = AccessLevel.PROTECTED)
     @CommandLine.Option(names = {"--userid", "-u"}, description = "Google User ID/email", required = true)
     private String userId;
@@ -100,7 +105,7 @@ public abstract class ASheetCommand implements Callable<Integer> {
     private boolean write = false;
 
     private BookBot buildBookBot() {
-        return new BookBot(getAuth(), getCachePath(), getCookieStorePath(), getDbPath(), getUserId());
+        return new BookBot(getTabsAuth(), getCachePath(), getCookieStorePath(), getDbPath(), getUserId());
     }
 
     private JsonStoreFactory buildJsonStoreFactory() {
@@ -109,6 +114,10 @@ public abstract class ASheetCommand implements Callable<Integer> {
 
     private SheetStoreFactory buildSheetStoreFactory() {
         return new SheetStoreFactory(getNamingConvention(), getUserId());
+    }
+
+    private StoryGraphHtml buildStoryGraphHtml() {
+        return new StoryGraphHtml(getCachePath(), getStoryGraphCookies());
     }
 
     @Override
@@ -172,7 +181,7 @@ public abstract class ASheetCommand implements Callable<Integer> {
             return coercion.apply(text);
         }
         if (StringStuff.isNumeric(text)) {
-            return Double.parseDouble(text);
+            return Math.round(Double.parseDouble(text) * 1000d) / 1000d;
         } else if (StringStuff.isBoolean(text)) {
             return Boolean.parseBoolean(text);
         } else if (StringStuff.isDate(text)) {
