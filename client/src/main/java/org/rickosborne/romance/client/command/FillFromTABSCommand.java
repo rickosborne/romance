@@ -2,7 +2,7 @@ package org.rickosborne.romance.client.command;
 
 import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
 import com.google.api.services.sheets.v4.model.Request;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.model.AuthorModel;
@@ -19,7 +19,7 @@ import java.util.Map;
 
 import static org.rickosborne.romance.util.StringStuff.nonBlank;
 
-@Log
+@Slf4j
 @CommandLine.Command(
     name = "tabs-data-for-sheet",
     description = "Pull and materialize the Sheet data to JSON files"

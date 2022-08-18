@@ -6,7 +6,7 @@ import com.google.api.services.sheets.v4.model.Spreadsheet;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
@@ -21,7 +21,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@Log
+@Slf4j
 @Getter(value = AccessLevel.PROTECTED)
 @RequiredArgsConstructor
 public class SheetStore<M> implements ModelStore<M> {

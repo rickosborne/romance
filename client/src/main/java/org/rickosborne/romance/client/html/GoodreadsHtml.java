@@ -2,8 +2,7 @@ package org.rickosborne.romance.client.html;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.java.Log;
-import org.rickosborne.romance.client.command.HtmlScraper;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.util.BookStuff;
 import org.rickosborne.romance.util.StringStuff;
@@ -19,7 +18,7 @@ import java.util.regex.Pattern;
 import static org.rickosborne.romance.util.ModelSetter.setIfEmpty;
 import static org.rickosborne.romance.util.StringStuff.setButNot;
 
-@Log
+@Slf4j
 @RequiredArgsConstructor
 public class GoodreadsHtml {
     public static final int DELAY_MS = 5000;
@@ -136,7 +135,7 @@ public class GoodreadsHtml {
                     setter.accept(book, text);
                 }
             } catch (final NullPointerException e) {
-                log.warning("NPE while parsing GR BookPage: " + this.name());
+                log.warn("NPE while parsing GR BookPage: " + this.name());
             }
         }
     }

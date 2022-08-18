@@ -4,7 +4,7 @@ import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.model.GridProperties;
 import com.google.api.services.sheets.v4.model.Sheet;
 import com.google.api.services.sheets.v4.model.Spreadsheet;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -18,7 +18,7 @@ import static org.rickosborne.romance.BooksSheets.getSpreadsheet;
 import static org.rickosborne.romance.BooksSheets.getSpreadsheets;
 import static org.rickosborne.romance.BooksSheets.sheetValues;
 
-@Log
+@Slf4j
 @CommandLine.Command(
     name = "auth",
     description = "Authorize and save credentials"

@@ -5,7 +5,7 @@ import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
 import com.google.api.services.sheets.v4.model.Request;
 import com.google.api.services.sheets.v4.model.Sheet;
 import com.google.api.services.sheets.v4.model.Spreadsheet;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.json.JsonStore;
@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-@Log
+@Slf4j
 @CommandLine.Command(
     name = "data-from-sheet",
     description = "Pull and materialize the Sheet data to JSON files"

@@ -1,21 +1,24 @@
 package org.rickosborne.romance.client.command;
 
 import lombok.Value;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.db.DbJsonWriter;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.sheet.SheetStore;
 import org.rickosborne.romance.util.BookBot;
+import org.rickosborne.romance.util.LanguageParser;
 import org.rickosborne.romance.util.SheetStuff;
 import picocli.CommandLine;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.rickosborne.romance.util.FileStuff.withCachedFile;
 import static org.rickosborne.romance.util.StringStuff.alphaOnly;
@@ -24,13 +27,15 @@ import static org.rickosborne.romance.util.StringStuff.alphaOnly;
     name = "wishlist",
     description = "Fetch your wishlist from AudiobookStore"
 )
-@Log
+@Slf4j
 public class WishlistCommand extends ASheetCommand {
     private static final Duration wishlistCacheExpiry = Duration.ofHours(1);
     private static final String wishlistCacheFileName = "wishlist.json";
+    private final LanguageParser languageParser = new LanguageParser();
 
-    private String bookTitleAuthor(final BookModel bookModel) {
-        return alphaOnly(bookModel.getAuthorName()) + "\t" + alphaOnly(bookModel.getTitle());
+    private Stream<String> bookTitleAuthor(final BookModel bookModel) {
+        return Arrays.stream(bookModel.getAuthorName().split(",\\s*"))
+            .map(authorName -> alphaOnly(authorName) + "\t" + alphaOnly(bookModel.getTitle()));
     }
 
     @Override
@@ -47,7 +52,10 @@ public class WishlistCommand extends ASheetCommand {
             return 0;
         }
         final BookBot bookBot = getBookBot();
-        final List<BookModel> extendedBooks = wishlist.stream().map(bookBot::extendAll).collect(Collectors.toList());
+        final List<BookModel> extendedBooks = wishlist.stream()
+            .map(bookBot::extendAll)
+            .map(bookBot::extendWithTextInference)
+            .collect(Collectors.toList());
         for (final BookModel book : extendedBooks) {
             final DocTabbed docTabbed = DocTabbed.fromBookModel(book);
             System.out.println(docTabbed.toString());
@@ -71,9 +79,9 @@ public class WishlistCommand extends ASheetCommand {
                 });
                 final Set<String> bookTitlesAuthors = sheetStore.getRecords().stream()
                     .map(SheetStuff.Indexed::getModel)
-                    .map(this::bookTitleAuthor)
+                    .flatMap(this::bookTitleAuthor)
                     .collect(Collectors.toSet());
-                wishlist.removeIf(book -> bookTitlesAuthors.contains(bookTitleAuthor(book)));
+                wishlist.removeIf(book -> bookTitleAuthor(book).anyMatch(bookTitlesAuthors::contains));
                 return wishlist;
             },
             file -> {

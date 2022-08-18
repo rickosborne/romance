@@ -3,7 +3,7 @@ package org.rickosborne.romance.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.NonNull;
 import org.rickosborne.romance.AudiobookStore;
-import org.rickosborne.romance.client.command.BookMerger;
+import org.rickosborne.romance.util.BookMerger;
 import org.rickosborne.romance.client.response.AudiobookStoreSuggestion;
 import org.rickosborne.romance.db.model.BookModel;
 import retrofit2.Call;

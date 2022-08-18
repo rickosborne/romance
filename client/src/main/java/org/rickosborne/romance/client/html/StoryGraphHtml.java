@@ -3,12 +3,11 @@ package org.rickosborne.romance.client.html;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
 import org.jsoup.nodes.Document;
 import org.rickosborne.romance.StoryGraph;
 import org.rickosborne.romance.client.JsonCookieStore;
-import org.rickosborne.romance.client.command.HtmlScraper;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.util.StringStuff;
 
@@ -34,7 +33,7 @@ import static org.rickosborne.romance.util.StringStuff.nonBlank;
 import static org.rickosborne.romance.util.StringStuff.uriFromString;
 import static org.rickosborne.romance.util.StringStuff.urlFromString;
 
-@Log
+@Slf4j
 @RequiredArgsConstructor
 public class StoryGraphHtml {
     public static final int DELAY_MS = 4000;
@@ -123,7 +122,7 @@ public class StoryGraphHtml {
                     if (cookieStore != null) {
                         cookieStore.add(uriFromString(StoryGraph.API_ROOT), cookie);
                     } else {
-                        log.warning("No SG cookie store");
+                        log.warn("No SG cookie store");
                     }
                 }
             }

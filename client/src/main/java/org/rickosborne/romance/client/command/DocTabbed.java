@@ -33,6 +33,10 @@ public class DocTabbed {
         return Optional.ofNullable(d).map(h -> Double.toString(Math.round(h * 100) / 100.0d)).orElse("");
     }
 
+    public static String emptyIfNull(final Integer d) {
+        return Optional.ofNullable(d).map(String::valueOf).orElse("");
+    }
+
     public static String emptyIfNull(final URL url) {
         return Optional.ofNullable(url).map(URL::toString).orElse("");
     }
@@ -63,18 +67,37 @@ public class DocTabbed {
         return DocTabbed.builder()
             .title(book.getTitle())
             .author(book.getAuthorName())
+            .pages(book.getPages())
+            .publisher(book.getPublisherName())
             .narrator(book.getNarratorName())
             .hours(book.getDurationHours())
-            .absUrl(book.getAudiobookStoreUrl())
-            .grUrl(book.getGoodreadsUrl())
-            .imageUrl(book.getImageUrl())
-            .isbn(book.getIsbn())
-            .pages(book.getPages())
             .published(Optional.ofNullable(book.getDatePublish()).map(d -> d.atStartOfDay().toInstant(ZoneOffset.UTC)).orElse(null))
-            .publisher(book.getPublisherName())
             .purchased(Optional.ofNullable(book.getDatePurchase()).map(d -> d.atStartOfDay().toInstant(ZoneOffset.UTC)).orElse(null))
             .read(Boolean.TRUE.equals(book.getDnf()) ? "DNF" : Optional.ofNullable(book.getDateRead()).map(d -> d.format(DateTimeFormatter.ISO_LOCAL_DATE)).orElse(null))
+            .grUrl(book.getGoodreadsUrl())
+            .absUrl(book.getAudiobookStoreUrl())
+            .rickReview(book.getRickReviewUrl())
+            .imageUrl(book.getImageUrl())
+            .isbn(book.getIsbn())
             .sgUrl(book.getStorygraphUrl())
+            .mc1Name(book.getMc1().getName())
+            .mc1Gender(book.getMc1().getGender())
+            .mc1Pronouns(book.getMc1().getPronouns())
+            .mc1Age(book.getMc1().getAge())
+            .mc1Profession(book.getMc1().getProfession())
+            .mc1Attachment(book.getMc1().getAttachment())
+            .mc2Name(book.getMc2().getName())
+            .mc2Gender(book.getMc2().getGender())
+            .mc2Pronouns(book.getMc2().getPronouns())
+            .mc2Age(book.getMc2().getAge())
+            .mc2Profession(book.getMc2().getProfession())
+            .mc2Attachment(book.getMc2().getAttachment())
+            .sexScenes(book.getSexScenes())
+            .sexVariety(book.getSexVariety())
+            .sexExplicitness(book.getSexExplicitness())
+            .seriesName(book.getSeriesName())
+            .seriesPart(book.getSeriesPart())
+            .location(book.getLocation())
             .build();
     }
 
@@ -101,12 +124,31 @@ public class DocTabbed {
     private final Double hours;
     private final URL imageUrl;
     private final String isbn;
+    private final String location;
+    private final String mc1Age;
+    private final String mc1Attachment;
+    private final String mc1Gender;
+    private final String mc1Name;
+    private final String mc1Profession;
+    private final String mc1Pronouns;
+    private final String mc2Age;
+    private final String mc2Attachment;
+    private final String mc2Gender;
+    private final String mc2Name;
+    private final String mc2Profession;
+    private final String mc2Pronouns;
     private final String narrator;
     private final Integer pages;
     private final Instant published;
     private final String publisher;
     private final Instant purchased;
     private final String read;
+    private final URL rickReview;
+    private final String seriesName;
+    private final String seriesPart;
+    private final String sexExplicitness;
+    private final String sexScenes;
+    private final String sexVariety;
     private final URL sgUrl;
     private final String title;
 
@@ -118,15 +160,34 @@ public class DocTabbed {
             .absUrl(coalesce(absUrl, other.absUrl))
             .author(coalesce(author, other.author))
             .grUrl(coalesce(grUrl, other.grUrl))
+            .hours(coalesce(hours, other.hours))
             .imageUrl(coalesce(imageUrl, other.imageUrl))
             .isbn(coalesce(isbn, other.isbn))
-            .hours(coalesce(hours, other.hours))
+            .location(coalesce(location, other.location))
+            .mc1Age(coalesce(mc1Age, other.mc1Age))
+            .mc1Attachment(coalesce(mc1Attachment, other.mc1Attachment))
+            .mc1Gender(coalesce(mc1Gender, other.mc1Gender))
+            .mc1Name(coalesce(mc1Name, other.mc1Name))
+            .mc1Profession(coalesce(mc1Profession, other.mc1Profession))
+            .mc1Pronouns(coalesce(mc1Pronouns, other.mc1Pronouns))
+            .mc2Age(coalesce(mc2Age, other.mc2Age))
+            .mc2Attachment(coalesce(mc2Attachment, other.mc2Attachment))
+            .mc2Gender(coalesce(mc2Gender, other.mc2Gender))
+            .mc2Name(coalesce(mc2Name, other.mc2Name))
+            .mc2Profession(coalesce(mc2Profession, other.mc2Profession))
+            .mc2Pronouns(coalesce(mc2Pronouns, other.mc2Pronouns))
             .narrator(coalesce(narrator, other.narrator))
             .pages(coalesce(pages, other.pages))
             .published(coalesce(published, other.published))
             .publisher(coalesce(publisher, other.publisher))
             .purchased(coalesce(purchased, other.purchased))
             .read(coalesce(read, other.read))
+            .rickReview(coalesce(rickReview, other.rickReview))
+            .seriesName(coalesce(seriesName, other.seriesName))
+            .seriesPart(coalesce(seriesPart, other.seriesPart))
+            .sexExplicitness(coalesce(sexExplicitness, other.sexExplicitness))
+            .sexScenes(coalesce(sexScenes, other.sexScenes))
+            .sexVariety(coalesce(sexVariety, other.sexVariety))
             .title(coalesce(title, other.title))
             .build();
     }
@@ -134,21 +195,19 @@ public class DocTabbed {
     @Override
     public String toString() {
         final List<String> columns = new LinkedList<>();
-        columns.add(emptyIfNull(title));
-        columns.add(emptyIfNull(author));
-        columns.add(Optional.ofNullable(pages).map(String::valueOf).orElse("")); // pages
-        columns.add(emptyIfNull(publisher));
-        columns.add(emptyIfNull(narrator));
-        columns.add(emptyIfNull(hours));
-        columns.add(emptyIfNull(dateOnly(published)));
-        columns.add(emptyIfNull(dateOnly(purchased)));
-        columns.add(emptyIfNull(read));
-        columns.add(emptyIfNull(grUrl));
-        columns.add(emptyIfNull(absUrl));
-        columns.add(""); // rick review
-        columns.add(emptyIfNull(imageUrl));
-        columns.add(emptyIfNull(isbn));
-        columns.add(emptyIfNull(sgUrl));
+        for (final String attr : new String[]{
+            title, author, emptyIfNull(pages), publisher, narrator, emptyIfNull(hours),
+            dateOnly(published), dateOnly(purchased), read, emptyIfNull(grUrl),
+            emptyIfNull(absUrl), emptyIfNull(rickReview), emptyIfNull(imageUrl), isbn,
+            emptyIfNull(sgUrl),
+            mc1Name, mc1Gender, mc1Pronouns, mc1Age, mc1Profession, mc1Attachment,
+            mc2Name, mc2Gender, mc2Pronouns, mc2Age, mc2Profession, mc2Attachment,
+            sexScenes, sexVariety, sexExplicitness,
+            seriesName, seriesPart,
+            location
+        }) {
+            columns.add(emptyIfNull(attr));
+        }
         return String.join("\t", columns);
     }
 }

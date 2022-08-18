@@ -1,4 +1,4 @@
-package org.rickosborne.romance.client.command;
+package org.rickosborne.romance.util;
 
 import org.rickosborne.romance.client.response.AudiobookStoreSuggestion;
 import org.rickosborne.romance.client.response.BookInformation;

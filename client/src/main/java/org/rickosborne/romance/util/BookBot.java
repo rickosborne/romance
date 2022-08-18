@@ -7,7 +7,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.client.AudiobookStoreService;
@@ -16,7 +16,6 @@ import org.rickosborne.romance.client.CacheClient;
 import org.rickosborne.romance.client.GoodreadsService;
 import org.rickosborne.romance.client.JsonCookieStore;
 import org.rickosborne.romance.client.command.AudiobookStoreAuthOptions;
-import org.rickosborne.romance.client.command.BookMerger;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.client.html.GoodreadsHtml;
 import org.rickosborne.romance.client.html.StoryGraphHtml;
@@ -38,11 +37,11 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.rickosborne.romance.client.command.BookMerger.modelFromBookInformation;
+import static org.rickosborne.romance.util.BookMerger.modelFromBookInformation;
 import static org.rickosborne.romance.util.StringStuff.fuzzyListMatch;
 import static org.rickosborne.romance.util.StringStuff.fuzzyMatch;
 
-@Log
+@Slf4j
 @Getter
 @RequiredArgsConstructor
 public class BookBot {
@@ -81,6 +80,8 @@ public class BookBot {
         }
         return JsonCookieStore.fromPath(cookieStorePath);
     });
+    @Getter(lazy = true)
+    private final LanguageParser languageParser = new LanguageParser();
     @Getter(value = AccessLevel.PROTECTED, lazy = true)
     private final NamingConvention namingConvention = new NamingConvention();
     @Getter(lazy = true)
@@ -223,6 +224,40 @@ public class BookBot {
         return mergeBooks(original, sgBook);
     }
 
+    public BookModel extendWithTextInference(
+        @NonNull final BookModel original
+    ) {
+        final String description = original.getPublisherDescription();
+        if (description == null || description.isBlank()) {
+            return original;
+        }
+        final BookModel.MainChar storedMc1 = original.getMc1();
+        final BookModel.MainChar storedMc2 = original.getMc2();
+        if (storedMc1.getName() != null || storedMc2.getName() != null) {
+            return original;
+        }
+        log.info("Summarizing: " + original.getTitle() + " by " + original.getAuthorName());
+        log.info("Blurb: " + description);
+        final LanguageParser.Summary summary = getLanguageParser().summarize(description);
+        final String location = summary.getLocation();
+        if (location != null && original.getLocation() == null) {
+            original.setLocation(location);
+        }
+        final List<BookModel.MainChar> summaryChars = summary.getMainChars();
+        if (summaryChars == null || summaryChars.isEmpty()) {
+            return original;
+        }
+        for (final BookModel.MainChar summaryChar : summaryChars) {
+            final BookModel.MainChar storedMC = targetMC(summaryChar, storedMc1, storedMc2);
+            if (storedMC != null) {
+                storedMC.importFromIfNotNull(summaryChar);
+            } else {
+                log.warn("Dropped MC: " + summaryChar);
+            }
+        }
+        return original;
+    }
+
     public BookModel fetchAudiobookStoreBookInformation(@NonNull final BookModel original) {
         final String sku = original.getAudiobookStoreSku();
         final String userGuid = Optional.ofNullable(getAudiobookStoreUserGuid()).map(UUID::toString).orElse(null);
@@ -245,7 +280,7 @@ public class BookBot {
                 return Collections.emptyList();
             }
         } catch (IOException e) {
-            log.warning("Could not fetch TABS user info");
+            log.warn("Could not fetch TABS user info");
             return Collections.emptyList();
         }
         return info.getAudiobooks().stream().map(BookMerger::modelFromBookInformation).collect(Collectors.toList());
@@ -260,5 +295,28 @@ public class BookBot {
             book = getBookSchema().mergeModels(book, other);
         }
         return book;
+    }
+
+    private BookModel.MainChar targetMC(
+        final BookModel.MainChar needle,
+        @NonNull final BookModel.MainChar... haystacks
+    ) {
+        if (needle == null) {
+            return null;
+        }
+        final String name = needle.getName();
+        if (name == null) {
+            return null;
+        }
+        BookModel.MainChar otherwise = null;
+        for (final BookModel.MainChar hay : haystacks) {
+            final String hayName = hay.getName();
+            if (fuzzyMatch(name, hayName)) {
+                return hay;
+            } else if (hayName == null && otherwise == null) {
+                otherwise = hay;
+            }
+        }
+        return otherwise;
     }
 }

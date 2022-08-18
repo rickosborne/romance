@@ -7,7 +7,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbJsonWriter;
 import org.rickosborne.romance.db.DbModel;
@@ -17,14 +17,15 @@ import org.rickosborne.romance.db.model.ModelSchema;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-@Log
+@Slf4j
 @Getter(value = AccessLevel.PROTECTED)
 @RequiredArgsConstructor
-public class JsonStore<M> implements ModelStore<M> {
+public class JsonStore<M> implements ModelStore<M>, Iterable<M> {
     public static final String FILE_EXT = ".json";
     @Getter
     private final DbModel dbModel;
@@ -74,6 +75,27 @@ public class JsonStore<M> implements ModelStore<M> {
         );
     }
 
+    @Override
+    public Iterator<M> iterator() {
+        int[] at = {0};
+        final File[] files = listFiles();
+        return new Iterator<>() {
+            @Override
+            public boolean hasNext() {
+                return at[0] < files.length;
+            }
+
+            @Override
+            public M next() {
+                return loadFromFile(files[at[0]++]);
+            }
+        };
+    }
+
+    private File[] listFiles() {
+        return typePath.toFile().listFiles(fn -> fn.isFile() && fn.getName().endsWith(FILE_EXT));
+    }
+
     private M loadFromFile(@NonNull final File file) {
         if (file.isFile()) {
             try {
@@ -94,7 +116,7 @@ public class JsonStore<M> implements ModelStore<M> {
         try {
             if (!typePath.toFile().exists()) {
                 if (typePath.toFile().mkdirs()) {
-                    log.fine("Created directory: " + typePath);
+                    log.debug("Created directory: " + typePath);
                 }
             }
             getJsonWriter().writeValue(modelFile, model);
@@ -114,7 +136,7 @@ public class JsonStore<M> implements ModelStore<M> {
 
     @Override
     public Stream<M> stream() {
-        final File[] files = typePath.toFile().listFiles(fn -> fn.isFile() && fn.getName().endsWith(FILE_EXT));
+        final File[] files = listFiles();
         if (files == null || files.length == 0) {
             return Stream.empty();
         }

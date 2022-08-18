@@ -2,7 +2,7 @@ package org.rickosborne.romance.client.command;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.client.AudiobookStoreService;
 import org.rickosborne.romance.client.response.Login;
 import picocli.CommandLine;
@@ -10,7 +10,7 @@ import picocli.CommandLine;
 import java.io.IOException;
 import java.util.UUID;
 
-@Log
+@Slf4j
 @Getter
 public class AudiobookStoreAuthOptions {
     @CommandLine.Option(names = "password", description = "ABS Password", defaultValue = "${env:AUDIOBOOKSTORE_PASSWORD:-}")
@@ -36,7 +36,7 @@ public class AudiobookStoreAuthOptions {
                 throw new NullPointerException("ABS user not found or bad password");
             }
             setAbsUserGuid(login.getUserGuid());
-            log.fine("Fetched user GUID: " + absUserGuid);
+            log.debug("Fetched user GUID: " + absUserGuid);
             return login;
         }
         return null;

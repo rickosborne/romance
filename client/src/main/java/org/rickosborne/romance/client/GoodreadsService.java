@@ -2,7 +2,7 @@ package org.rickosborne.romance.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.rickosborne.romance.Goodreads;
-import org.rickosborne.romance.client.command.BookMerger;
+import org.rickosborne.romance.util.BookMerger;
 import org.rickosborne.romance.client.response.GoodreadsAuthor;
 import org.rickosborne.romance.client.response.GoodreadsAutoComplete;
 import org.rickosborne.romance.db.model.BookModel;

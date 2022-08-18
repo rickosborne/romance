@@ -10,7 +10,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.sheets.v4.SheetsScopes;
 import lombok.NonNull;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -22,7 +22,7 @@ import java.util.List;
 
 import static com.google.api.client.json.gson.GsonFactory.getDefaultInstance;
 
-@Log
+@Slf4j
 public class Google {
     public static final String ACCESS_TYPE_OFFLINE = "offline";
     public static final Path CREDENTIALS_PATH_DEFAULT = Path.of(".credentials/google.json");
@@ -67,10 +67,10 @@ public class Google {
                 .build();
             return new AuthorizationCodeInstalledApp(authFlow, serverReceiver).authorize(userId);
         } catch (IOException e) {
-            log.severe(String.format("Could not open credentials file %s: %s", credsFile, e.getMessage()));
+            log.error(String.format("Could not open credentials file %s: %s", credsFile, e.getMessage()));
             throw new RuntimeException(e);
         } catch (GeneralSecurityException e) {
-            log.severe(String.format("Could not open HTTP transport: %s", e.getMessage()));
+            log.error(String.format("Could not open HTTP transport: %s", e.getMessage()));
             throw new RuntimeException(e);
         }
     }

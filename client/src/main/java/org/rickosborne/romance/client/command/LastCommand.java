@@ -3,7 +3,7 @@ package org.rickosborne.romance.client.command;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.client.AudiobookStoreService;
 import org.rickosborne.romance.client.CacheClient;
 import org.rickosborne.romance.client.response.BookInformation;
@@ -24,10 +24,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.rickosborne.romance.client.command.BookMerger.modelFromBookInformation;
+import static org.rickosborne.romance.util.BookMerger.modelFromBookInformation;
 import static org.rickosborne.romance.util.StringStuff.CRLF;
 
-@Log
+@Slf4j
 @CommandLine.Command(
     name = "last",
     description = "Fetch and display recent purchases"
@@ -76,6 +76,7 @@ public class LastCommand implements Callable<Integer> {
                 BookModel model = bookBot.extendAll(
                     modelFromBookInformation(book)
                 );
+                model = bookBot.extendWithTextInference(model);
                 sb.append(DocTabbed.fromBookModel(model)).append(CRLF);
             });
         System.out.println(sb);

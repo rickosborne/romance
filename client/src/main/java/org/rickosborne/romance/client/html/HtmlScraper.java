@@ -1,9 +1,9 @@
-package org.rickosborne.romance.client.command;
+package org.rickosborne.romance.client.html;
 
 import lombok.AccessLevel;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -26,7 +26,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-@Log
+@Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class HtmlScraper {
     public static final String HTML_FILE_EXTENSION = ".html";
@@ -46,7 +46,7 @@ public class HtmlScraper {
         final Instant lastModified = Instant.ofEpochMilli(lastModifiedMs);
         if (Instant.now().minus(maxAge).isAfter(lastModified)) {
             if (!file.delete()) {
-                log.warning("Could not delete: " + file);
+                log.warn("Could not delete: " + file);
             }
         }
     }
@@ -83,7 +83,7 @@ public class HtmlScraper {
                     Thread.sleep(delay);
                 }
             }
-            log.info("Fetch: " + url);
+            Fetched.log.info("Fetch: " + url);
             final Document liveDoc = Jsoup.connect(url.toString())
                 .cookieStore(cookieStore)
                 .headers(Optional.ofNullable(headers).orElseGet(Collections::emptyMap))
@@ -117,10 +117,10 @@ public class HtmlScraper {
         }
         if (file.isFile()) {
             try {
-                log.info("Cached: " + url);
+                Cached.log.info("Cached: " + url);
                 return Jsoup.parse(file);
             } catch (IOException e) {
-                log.warning("Could not parse: " + file + "; " + e.getMessage());
+                log.warn("Could not parse: " + file + "; " + e.getMessage());
             }
         }
         return null;
@@ -272,4 +272,10 @@ public class HtmlScraper {
             return Collections.emptyMap();
         }
     }
+
+    @Slf4j
+    public static class Cached {}
+
+    @Slf4j
+    public static class Fetched {}
 }

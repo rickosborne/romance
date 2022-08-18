@@ -1,7 +1,7 @@
 package org.rickosborne.romance.client.command;
 
 import lombok.Getter;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.client.JsonCookieStore;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
@@ -20,7 +20,7 @@ import java.util.concurrent.Callable;
     name = "preorders",
     description = "Fetch a list of preorders from AudiobookStore"
 )
-@Log
+@Slf4j
 public class PreordersCommand implements Callable<Integer> {
     @CommandLine.Mixin
     AudiobookStoreAuthOptions auth;

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.db.DbJsonWriter;
 import org.rickosborne.romance.util.Pair;
 
@@ -20,7 +20,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Log
+@Slf4j
 @RequiredArgsConstructor
 public class JsonCookieStore implements CookieStore {
     public static JsonCookieStore fromPath(@NonNull final Path path) {
@@ -63,7 +63,7 @@ public class JsonCookieStore implements CookieStore {
             .sorted(Comparator.comparing(SimpleCookie::getUri).thenComparing(SimpleCookie::getName))
             .collect(Collectors.toList());
         try {
-            log.fine("Updating cookie store: " + storePath);
+            log.debug("Updating cookie store: " + storePath);
             DbJsonWriter.getJsonWriter().writeValue(storePath.toFile(), new SimpleStore(simpleCookies));
         } catch (IOException e) {
             throw new RuntimeException("Could not write cookieStore: " + storePath, e);

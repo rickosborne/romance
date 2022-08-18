@@ -1,12 +1,12 @@
 package org.rickosborne.romance.client.command;
 
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.client.html.StoryGraphHtml;
 import picocli.CommandLine;
 
 import java.util.Objects;
 
-@Log
+@Slf4j
 @CommandLine.Command(
     name = "sg-from-sheet",
     description = "Synchronize StoryGraph from Google Sheet"

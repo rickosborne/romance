@@ -2,7 +2,7 @@ package org.rickosborne.audiobookstore.client;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.rickosborne.romance.client.AudiobookStoreService;
 import org.rickosborne.romance.client.response.Login;
@@ -13,7 +13,7 @@ import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@Log
+@Slf4j
 class AudiobookStoreServiceTest {
     @Getter(lazy = true)
     private final AudiobookStoreService service = AudiobookStoreService.build();

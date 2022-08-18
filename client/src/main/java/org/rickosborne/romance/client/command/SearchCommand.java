@@ -1,7 +1,7 @@
 package org.rickosborne.romance.client.command;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.client.AudiobookStoreService;
 import org.rickosborne.romance.client.AudiobookStoreSuggestService;
 import org.rickosborne.romance.client.CacheClient;
@@ -12,6 +12,7 @@ import org.rickosborne.romance.client.response.GoodreadsAuthor;
 import org.rickosborne.romance.client.response.GoodreadsAutoComplete;
 import org.rickosborne.romance.client.response.Login;
 import org.rickosborne.romance.client.response.UserInformation2;
+import org.rickosborne.romance.util.BookMerger;
 import picocli.CommandLine;
 
 import java.util.List;
@@ -19,7 +20,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
-@Log
+@Slf4j
 @CommandLine.Command(
     name = "search",
     description = "Search for a book by title"

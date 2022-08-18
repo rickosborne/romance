@@ -20,7 +20,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
-import static org.rickosborne.romance.client.command.BookMerger.modelFromBookInformation;
+import static org.rickosborne.romance.util.BookMerger.modelFromBookInformation;
 
 @CommandLine.Command(
     name = "data-from-abs",

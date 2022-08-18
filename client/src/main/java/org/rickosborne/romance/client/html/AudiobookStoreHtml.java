@@ -12,7 +12,6 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.rickosborne.romance.AudiobookStore;
 import org.rickosborne.romance.client.JsonCookieStore;
-import org.rickosborne.romance.client.command.HtmlScraper;
 import org.rickosborne.romance.db.DbJsonWriter;
 import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
@@ -134,8 +133,8 @@ public class AudiobookStoreHtml {
                         .getAttribute("src")
                         .replace("-square-400.", "-square-1536.")))
                     .audiobookStoreUrl(urlFromString(link.getAttribute("href")))
-                    .title(link.getAttribute("title"))
-                    .authorName(figure.findElement(By.cssSelector(".titledetail-author .authorName")).getText())
+                    .title(link.getAttribute("title").trim())
+                    .authorName(figure.findElement(By.cssSelector(".titledetail-author .authorName")).getText().trim())
                 ;
                 books.add(bookBuilder.build());
             }

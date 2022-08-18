@@ -3,8 +3,10 @@ package org.rickosborne.romance.db.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.rickosborne.romance.db.Importable;
 import org.rickosborne.romance.util.BookRating;
 import org.rickosborne.romance.util.StringStuff;
@@ -76,8 +78,17 @@ public class BookModel {
         return StringStuff.starsFromNumber(ratings.get(BookRating.Overall));
     }
 
+    public void setDurationHours(final Double hours) {
+        if (hours == null) {
+            return;
+        }
+        durationHours = Math.round(hours * 100d) / 100d;
+    }
+
     @Data
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class MainChar implements Importable<MainChar> {
         private String age;
         private String attachment;
@@ -85,6 +96,15 @@ public class BookModel {
         private String name;
         private String profession;
         private String pronouns;
+
+        public void clear() {
+            age = null;
+            attachment = null;
+            gender = null;
+            name = null;
+            profession = null;
+            pronouns = null;
+        }
 
         @Override
         public void importFrom(final MainChar other) {
@@ -97,6 +117,28 @@ public class BookModel {
             Importable.setIf(other.name, this::setName);
             Importable.setIf(other.profession, this::setProfession);
             Importable.setIf(other.pronouns, this::setPronouns);
+        }
+
+        @Override
+        public void importFromIfNotNull(final MainChar other) {
+            if (other == null) {
+                return;
+            }
+            Importable.setIfNotNull(age, other.age, this::setAge);
+            Importable.setIfNotNull(attachment, other.attachment, this::setAttachment);
+            Importable.setIfNotNull(gender, other.gender, this::setGender);
+            Importable.setIfNotNull(name, other.name, this::setName);
+            Importable.setIfNotNull(profession, other.profession, this::setProfession);
+            Importable.setIfNotNull(pronouns, other.pronouns, this::setPronouns);
+        }
+
+        public String toString() {
+            return (name == null ? "<no name>" : name)
+                + (pronouns == null ? "" : " (" + pronouns + ")")
+                + (age == null ? "" : " " + age)
+                + (gender == null ? "" : " " + gender)
+                + (attachment == null ? "" : " " + attachment)
+                + (profession == null ? "" : " " + profession);
         }
     }
 }

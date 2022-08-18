@@ -9,9 +9,14 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class StringStuff {
     public static final Pattern BOOLEAN = Pattern.compile("^(?:true|false)$", Pattern.CASE_INSENSITIVE);
@@ -20,6 +25,7 @@ public class StringStuff {
     public static final String[] FRACTIONS = new String[]{"", "¼", "½", "¾"};
     public static final Pattern ISO_DATE = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
     public static final Pattern NUMERIC = Pattern.compile("^[\\d,]+(?:\\.\\d*)?$");
+    public static final List<String> WHITESPACE = List.of(" ", "\t", "\r", "\n");
 
     public static String alphaOnly(final String s) {
         if (s == null) {
@@ -41,6 +47,32 @@ public class StringStuff {
 
     public static String ellipsize(final String s, final int maxLen) {
         return s == null ? null : s.length() > maxLen ? s.substring(0, maxLen) : s;
+    }
+
+    public static int firstWhitespace(final String s) {
+        if (s == null) {
+            return -1;
+        }
+        int ws = -1;
+        for (final String w : WHITESPACE) {
+            final int at = s.indexOf(w);
+            if (at > -1 && (ws == -1 || ws > at)) {
+                ws = at;
+            }
+        }
+        return ws;
+    }
+
+    public static String firstWordOf(final String s) {
+        if (s == null || s.isBlank()) {
+            return s;
+        }
+        final String t = s.trim();
+        final int ws = firstWhitespace(t);
+        if (ws > 0) {
+            return t.substring(0, ws);
+        }
+        return t;
     }
 
     public static boolean fuzzyListMatch(final String a, final String b) {
@@ -79,6 +111,13 @@ public class StringStuff {
         return s != null && NUMERIC.matcher(s).matches();
     }
 
+    public static String joinSorted(final String delim, final Collection<String> set) {
+        if (set == null || set.isEmpty()) {
+            return null;
+        }
+        return set.stream().sorted().collect(Collectors.joining(delim));
+    }
+
     public static String noLongerThan(final int maxLength, final String s) {
         return s == null || s.length() <= maxLength ? s : s.substring(0, maxLength);
     }
@@ -89,6 +128,14 @@ public class StringStuff {
 
     public static String nullIfBlank(final String s) {
         return s == null || s.isBlank() ? null : s;
+    }
+
+    public static Map<String, String> pairMap(final String... items) {
+        final Map<String, String> map = new HashMap<>();
+        for (int i = 1; i < items.length; i += 2) {
+            map.put(items[i - 1], items[i]);
+        }
+        return map;
     }
 
     @SafeVarargs

@@ -14,5 +14,17 @@ public interface Importable<M> {
         }
     }
 
+    static <T> void setIfNotNull(
+        final T oldValue,
+        final T newValue,
+        @NonNull final Consumer<T> mutator
+    ) {
+        if (newValue != null && oldValue == null) {
+            mutator.accept(newValue);
+        }
+    }
+
     void importFrom(final M other);
+
+    void importFromIfNotNull(final M other);
 }

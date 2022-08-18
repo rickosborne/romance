@@ -1,13 +1,13 @@
 package org.rickosborne.romance.client.command;
 
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.client.AudiobookStoreService;
 import org.rickosborne.romance.client.response.UserInformation2;
 import picocli.CommandLine;
 
 import java.util.concurrent.Callable;
 
-@Log
+@Slf4j
 @CommandLine.Command(
     name = "absuser",
     description = "Fetch and display ABS user info"
