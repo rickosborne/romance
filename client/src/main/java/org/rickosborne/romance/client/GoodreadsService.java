@@ -6,6 +6,7 @@ import org.rickosborne.romance.util.BookMerger;
 import org.rickosborne.romance.client.response.GoodreadsAuthor;
 import org.rickosborne.romance.client.response.GoodreadsAutoComplete;
 import org.rickosborne.romance.db.model.BookModel;
+import org.slf4j.LoggerFactory;
 import retrofit2.Call;
 import retrofit2.Retrofit;
 import retrofit2.converter.jackson.JacksonConverterFactory;
@@ -52,7 +53,10 @@ public interface GoodreadsService {
         final String lcAuthor = author.toLowerCase();
         final String query = lcTitle + " " + lcAuthor;
         final List<GoodreadsAutoComplete> completes = buildCaching().fetchFomCache(new TypeReference<>() {
-        }, s -> s.autoComplete(query), query);
+        }, s -> {
+            LoggerFactory.getLogger(getClass()).info("Fetching GR autocomplete for: " + query);
+            return s.autoComplete(query);
+        }, query);
         if (completes == null || completes.isEmpty()) {
             return null;
         }

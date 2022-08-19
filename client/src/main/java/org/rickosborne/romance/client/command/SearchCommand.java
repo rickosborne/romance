@@ -49,7 +49,10 @@ public class SearchCommand implements Callable<Integer> {
         final String query = title + " " + author;
         final CacheClient<GoodreadsService> gr = GoodreadsService.buildCaching();
         final List<GoodreadsAutoComplete> grCompletes = gr.fetchFomCache(new TypeReference<>() {
-        }, s -> s.autoComplete(query), query);
+        }, s -> {
+            log.info("Fetching GR autocomplete for: " + query);
+            return s.autoComplete(query);
+        }, query);
         if (grCompletes == null || grCompletes.isEmpty()) {
             throw new NullPointerException("Book not found in GoodReads");
         }
@@ -62,7 +65,10 @@ public class SearchCommand implements Callable<Integer> {
         }
         final CacheClient<AudiobookStoreSuggestService> suggestService = AudiobookStoreSuggestService.buildCaching();
         final List<AudiobookStoreSuggestion> absSuggestions = suggestService.fetchFomCache(new TypeReference<>() {
-        }, s -> s.suggest(title), title);
+        }, s -> {
+            log.info("Fetching TABS suggestions for: " + title);
+            return s.suggest(title);
+        }, title);
         final AudiobookStoreSuggestion suggestion;
         if (absSuggestions != null && !absSuggestions.isEmpty()) {
             suggestion = absSuggestions.stream()
@@ -79,7 +85,10 @@ public class SearchCommand implements Callable<Integer> {
             final String userGuid = auth.getAbsUserGuid().toString();
             final String sku = suggestion.getKeyId();
             bookInformation = abs.fetchFomCache(new TypeReference<>() {
-            }, s -> s.bookInformation(userGuid, sku), sku);
+            }, s -> {
+                log.info("Fetching book information for: " + sku + ", " + suggestion.getCleanTitle());
+                return s.bookInformation(userGuid, sku);
+            }, sku);
             final UserInformation2 user = RetrofitCaller.fetchOrNull(abs.getService().userInformation2(userGuid));
             if (user != null) {
                 final List<BookInformation> audiobooks = user.getAudiobooks();

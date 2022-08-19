@@ -130,7 +130,10 @@ public class BookBot {
         model = extendWithGoodReadsAutoComplete(model);
         model = extendWithGoodReadsDetails(model);
         model = extendWithStoryGraphSearch(model);
-        return getBookStore().saveIfChanged(model);
+        if (getBookStore().idFromModel(model) != null) {
+            getBookStore().saveIfChanged(model);
+        }
+        return model;
     }
 
     public BookModel extendWithAudiobookStoreBookInformation(
@@ -265,7 +268,10 @@ public class BookBot {
             return null;
         }
         final BookInformation info2 = getAudiobookStoreCache().fetchFomCache(new TypeReference<>() {
-        }, s -> s.bookInformation(userGuid, sku), userGuid + sku);
+        }, s -> {
+            log.info("Fetch: BookInformation for " + sku + ", " + original);
+            return s.bookInformation(userGuid, sku);
+        }, userGuid + sku);
         return info2 == null ? null : modelFromBookInformation(info2);
     }
 

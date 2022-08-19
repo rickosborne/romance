@@ -83,4 +83,14 @@ public class BookInformation {
         }
         return Math.round(runtime / 36d) / 100d;
     }
+
+    @Override
+    public String toString() {
+        if (title == null && authors == null) {
+            return "<no book>";
+        }
+        return (title == null ? "<no title>" : title)
+            + " by "
+            + (authors == null ? "<no author>" : authors);
+    }
 }

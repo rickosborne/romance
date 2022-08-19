@@ -83,7 +83,7 @@ public class HtmlScraper {
                     Thread.sleep(delay);
                 }
             }
-            Fetched.log.info("Fetch: " + url);
+            Fetched.log.info(url.toString());
             final Document liveDoc = Jsoup.connect(url.toString())
                 .cookieStore(cookieStore)
                 .headers(Optional.ofNullable(headers).orElseGet(Collections::emptyMap))
@@ -117,7 +117,7 @@ public class HtmlScraper {
         }
         if (file.isFile()) {
             try {
-                Cached.log.info("Cached: " + url);
+                Cached.log.info(url.toString());
                 return Jsoup.parse(file);
             } catch (IOException e) {
                 log.warn("Could not parse: " + file + "; " + e.getMessage());

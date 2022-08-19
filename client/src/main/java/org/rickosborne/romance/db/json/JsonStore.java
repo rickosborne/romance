@@ -13,6 +13,7 @@ import org.rickosborne.romance.db.DbJsonWriter;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.ModelStore;
 import org.rickosborne.romance.db.model.ModelSchema;
+import org.rickosborne.romance.util.Pair;
 
 import java.io.File;
 import java.io.IOException;
@@ -136,10 +137,23 @@ public class JsonStore<M> implements ModelStore<M>, Iterable<M> {
 
     @Override
     public Stream<M> stream() {
+        return streamWithFiles().map(Pair::getLeft);
+    }
+
+    public Stream<Pair<M, File>> streamWithFiles() {
         final File[] files = listFiles();
         if (files == null || files.length == 0) {
             return Stream.empty();
         }
-        return Stream.of(files).map(this::loadFromFile).filter(Objects::nonNull);
+        return Stream.of(files).map(file -> {
+            final M model = loadFromFile(file);
+            if (model == null) {
+                if (file.delete()) {
+                    log.info("Deleted broken file: " + file);
+                }
+                return null;
+            }
+            return Pair.build(model, file);
+        }).filter(Objects::nonNull);
     }
 }

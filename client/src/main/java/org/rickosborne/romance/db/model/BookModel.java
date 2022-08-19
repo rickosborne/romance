@@ -85,6 +85,17 @@ public class BookModel {
         durationHours = Math.round(hours * 100d) / 100d;
     }
 
+    public String toString() {
+        if (title == null && authorName == null) {
+            return "<no book>";
+        }
+        return (title == null ? "<no title>" : title)
+            + " "
+            + (datePublish == null ? "by" : "(" + datePublish.getYear() + ")")
+            + " "
+            + (authorName == null ? "<no author>" : authorName);
+    }
+
     @Data
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     @NoArgsConstructor

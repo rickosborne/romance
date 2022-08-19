@@ -6,6 +6,7 @@ import org.rickosborne.romance.AudiobookStore;
 import org.rickosborne.romance.util.BookMerger;
 import org.rickosborne.romance.client.response.AudiobookStoreSuggestion;
 import org.rickosborne.romance.db.model.BookModel;
+import org.slf4j.LoggerFactory;
 import retrofit2.Call;
 import retrofit2.Retrofit;
 import retrofit2.converter.jackson.JacksonConverterFactory;
@@ -65,7 +66,10 @@ public interface AudiobookStoreSuggestService {
         }
         final String lcTitle = title.toLowerCase();
         final List<AudiobookStoreSuggestion> suggestions = buildCaching().fetchFomCache(new TypeReference<>() {
-        }, s -> s.suggest(lcTitle), lcTitle);
+        }, s -> {
+            LoggerFactory.getLogger(getClass()).info("Fetching TABS suggestions for: " + lcTitle);
+            return s.suggest(lcTitle);
+        }, lcTitle);
         if (suggestions == null) {
             return null;
         }

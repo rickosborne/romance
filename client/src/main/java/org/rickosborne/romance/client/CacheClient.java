@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import retrofit2.Call;
 import retrofit2.Response;
 
@@ -18,6 +19,7 @@ import java.util.regex.Pattern;
 import static org.rickosborne.romance.util.StringStuff.FILE_NAME_MAX_LENGTH;
 import static org.rickosborne.romance.util.StringStuff.noLongerThan;
 
+@Slf4j
 public class CacheClient<S> {
     public static String encodeCacheKey(final String key) {
         // return Base64.getMimeEncoder().encodeToString(key.getBytes()).replaceAll("=+$", "");
@@ -95,6 +97,8 @@ public class CacheClient<S> {
                     .withDefaultPrettyPrinter()
                     .writeValue(cacheFile, result);
                 return result;
+            } else {
+                log.warn("Unable to fetch: " + key);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

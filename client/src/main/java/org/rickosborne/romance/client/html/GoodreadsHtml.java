@@ -57,7 +57,7 @@ public class GoodreadsHtml {
         imageUrlTwitter((b, u) -> b.setImageUrl(StringStuff.urlFromString(u)), "meta[property=twitter:image]", "content"),
         isbn(setButNot(BookModel::setIsbn, "null", ""), "meta[property=books:isbn]", "content"),
         pages((b, p) -> b.setPages(Integer.parseInt(p, 10)), "meta[property=books:page_count]", "content"),
-        pagesDetails((b, p) -> b.setPages(Integer.parseInt(p, 10)), "#details [itemprop=numberOfPages]", s -> s.getHtml().replace(" pages", "")),
+        pagesDetails((b, p) -> b.setPages(Integer.parseInt(p, 10)), "#details [itemprop=numberOfPages]", s -> s.getHtml().replace(" pages", "").replace(" page", "")),
         publisherDescription(setIfEmpty(BookModel::setPublisherDescription, BookModel::getPublisherDescription), "#description span[style]", HtmlScraper::getText),
         authorName(BookModel::setAuthorName, "#bookAuthors:first-of-type .authorName__container:first-of-type .authorName:first-of-type [itemprop=name]:first-of-type", HtmlScraper::getText),
         seriesName(BookModel::setSeriesName, "#bookSeries a", h -> {
