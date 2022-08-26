@@ -37,6 +37,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static org.rickosborne.romance.util.BookMerger.bookLikeFilter;
 import static org.rickosborne.romance.util.BookMerger.modelFromBookInformation;
 import static org.rickosborne.romance.util.StringStuff.fuzzyListMatch;
 import static org.rickosborne.romance.util.StringStuff.fuzzyMatch;
@@ -122,7 +123,7 @@ public class BookBot {
     ) {
         BookModel model = original;
         model = extendWithAudiobookStorePurchase(model);
-        final BookModel existing = getBookStore().findLikeOrMatch(model, found -> fuzzyMatch(found.getTitle(), original.getTitle()) && fuzzyListMatch(found.getAuthorName(), original.getAuthorName()));
+        final BookModel existing = getBookStore().findLikeOrMatch(model, bookLikeFilter(model));
         model = mergeBooks(existing, model);
         model = extendWithAudiobookStoreBookInformation(model);
         model = extendWithAudiobookStoreSuggestion(model);
@@ -158,7 +159,7 @@ public class BookBot {
     ) {
         final List<BookModel> audiobooks = getTabsAudiobooks();
         final BookModel purchased = audiobooks.stream()
-            .filter(a -> fuzzyListMatch(a.getAuthorName(), original.getAuthorName()) && fuzzyMatch(a.getTitle(), original.getTitle()))
+            .filter(bookLikeFilter(original))
             .findAny()
             .orElse(null);
         return mergeBooks(original, purchased);

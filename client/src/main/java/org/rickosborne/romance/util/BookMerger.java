@@ -14,6 +14,10 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class BookMerger {
+    public static Predicate<BookModel> bookLikeFilter(final BookModel like) {
+        return b -> StringStuff.fuzzyMatch(b.getTitle(), like.getTitle()) && StringStuff.fuzzyListMatch(b.getAuthorName(), like.getAuthorName());
+    }
+
     public static <T> T coalesce(final Function<BookInformation, T> accessor, final BookInformation... books) {
         for (final BookInformation book : books) {
             final T value = accessor.apply(book);

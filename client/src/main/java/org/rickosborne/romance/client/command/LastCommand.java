@@ -1,7 +1,6 @@
 package org.rickosborne.romance.client.command;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.client.AudiobookStoreService;
@@ -9,22 +8,22 @@ import org.rickosborne.romance.client.CacheClient;
 import org.rickosborne.romance.client.response.BookInformation;
 import org.rickosborne.romance.client.response.UserInformation2;
 import org.rickosborne.romance.db.model.BookModel;
+import org.rickosborne.romance.db.sheet.SheetStore;
 import org.rickosborne.romance.util.BookBot;
+import org.rickosborne.romance.util.BookMerger;
 import picocli.CommandLine;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.rickosborne.romance.util.BookMerger.modelFromBookInformation;
+import static org.rickosborne.romance.util.BookMerger.bookLikeFilter;
 import static org.rickosborne.romance.util.StringStuff.CRLF;
 
 @Slf4j
@@ -32,51 +31,54 @@ import static org.rickosborne.romance.util.StringStuff.CRLF;
     name = "last",
     description = "Fetch and display recent purchases"
 )
-public class LastCommand implements Callable<Integer> {
-    @CommandLine.Mixin
-    AudiobookStoreAuthOptions auth;
-
-    @SuppressWarnings("unused")
-    @Getter
-    @CommandLine.Option(names = {"--cache", "-c"}, description = "Path to cache dir", defaultValue = ".cache/html")
-    private Path cachePath;
-
-    @SuppressWarnings("unused")
-    @Getter
-    @CommandLine.Option(names = {"--path", "-p"}, description = "Path to DB dir", defaultValue = "book-data")
-    private Path dbPath;
-
+public class LastCommand extends ASheetCommand {
+    @SuppressWarnings("FieldMayBeFinal")
+    @CommandLine.Option(names = "--no-nlp", description = "Disable NLP")
+    private boolean noNLP = false;
     @CommandLine.Parameters(paramLabel = "SPEC", description = "Specification for how many to show")
     String spec;
 
     @Override
-    public Integer call() throws IOException {
+    public Integer doWithSheets() {
         final Spec effectiveSpec = Spec.fromString(spec);
         if (effectiveSpec == null) {
             throw new IllegalArgumentException("Bad spec: " + spec);
         }
         final CacheClient<AudiobookStoreService> cachingService = AudiobookStoreService.buildCaching();
         final AudiobookStoreService service = cachingService.getService();
-        auth.ensureAuthGuid(service);
-        final UserInformation2 info = service.userInformation2(auth.getAbsUserGuid().toString()).execute().body();
+        getTabsAuth().ensureAuthGuid(service);
+        final UserInformation2 info;
+        try {
+            info = service.userInformation2(getTabsAuth().getAbsUserGuid().toString()).execute().body();
+        } catch (IOException e) {
+            log.error("Failed to get TABS userInformation2", e);
+            return 1;
+        }
         if (info == null) {
-            throw new NullPointerException("Could not fetch user info for GUID: " + auth.getAbsUserGuid());
+            throw new NullPointerException("Could not fetch user info for GUID: " + getTabsAuth().getAbsUserGuid());
         }
         final List<BookInformation> books = info.getAudiobooks();
         if (books == null || books.isEmpty()) {
             throw new NullPointerException("Missing books");
         }
-        final List<BookInformation> lastBooks = effectiveSpec.filterBooks(books)
+        final SheetStore<BookModel> bookSheet = getSheetStoreFactory().buildSheetStore(BookModel.class);
+        final List<BookModel> lastBooks = effectiveSpec.filterBooks(books)
             .stream().sorted(Comparator.comparing(BookInformation::getPurchaseInstant))
+            .map(BookMerger::modelFromBookInformation)
+            .filter(bi -> bookSheet.findLikeOrMatch(bi, bookLikeFilter(bi)) == null)
             .collect(Collectors.toList());
+        if (lastBooks.isEmpty()) {
+            System.out.println("No new books which are not already in the spreadsheet.");
+            return 0;
+        }
         final StringBuilder sb = new StringBuilder();
-        final BookBot bookBot = new BookBot(auth, cachePath, null, dbPath, null);
+        final BookBot bookBot = getBookBot();
         lastBooks
             .forEach(book -> {
-                BookModel model = bookBot.extendAll(
-                    modelFromBookInformation(book)
-                );
-                model = bookBot.extendWithTextInference(model);
+                BookModel model = bookBot.extendAll(book);
+                if (!noNLP) {
+                    model = bookBot.extendWithTextInference(model);
+                }
                 sb.append(DocTabbed.fromBookModel(model)).append(CRLF);
             });
         System.out.println(sb);
