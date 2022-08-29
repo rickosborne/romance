@@ -1,7 +1,9 @@
 package org.rickosborne.romance.client.command;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NonNull;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.client.AudiobookStoreService;
 import org.rickosborne.romance.client.CacheClient;
@@ -11,14 +13,22 @@ import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.sheet.SheetStore;
 import org.rickosborne.romance.util.BookBot;
 import org.rickosborne.romance.util.BookMerger;
+import org.rickosborne.romance.util.StringStuff;
 import picocli.CommandLine;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -32,11 +42,15 @@ import static org.rickosborne.romance.util.StringStuff.CRLF;
     description = "Fetch and display recent purchases"
 )
 public class LastCommand extends ASheetCommand {
+    public static final String IGNORED_PURCHASES_CSV = "ignored-purchases.csv";
+    public static final LocalDate ROMANCE_PURCHASE_START = LocalDate.of(2022, 2, 1);
     @SuppressWarnings("FieldMayBeFinal")
     @CommandLine.Option(names = "--no-nlp", description = "Disable NLP")
     private boolean noNLP = false;
     @CommandLine.Parameters(paramLabel = "SPEC", description = "Specification for how many to show")
     String spec;
+    @Getter(lazy = true)
+    private final List<Predicate<BookModel>> ignoredBooks = buildIgnoredBooks();
 
     @Override
     public Integer doWithSheets() {
@@ -62,17 +76,23 @@ public class LastCommand extends ASheetCommand {
             throw new NullPointerException("Missing books");
         }
         final SheetStore<BookModel> bookSheet = getSheetStoreFactory().buildSheetStore(BookModel.class);
-        final List<BookModel> lastBooks = effectiveSpec.filterBooks(books)
-            .stream().sorted(Comparator.comparing(BookInformation::getPurchaseInstant))
+        final BookBot bookBot = getBookBot();
+        final List<BookModel> lastBooks = effectiveSpec.filterBooks(books
+            .stream()
+            .filter(b -> LocalDate.ofInstant(b.getPurchaseInstant(), ZoneOffset.UTC).isAfter(ROMANCE_PURCHASE_START))
+            .sorted(Comparator.comparing(BookInformation::getPurchaseInstant).reversed())
             .map(BookMerger::modelFromBookInformation)
-            .filter(bi -> bookSheet.findLikeOrMatch(bi, bookLikeFilter(bi)) == null)
-            .collect(Collectors.toList());
+            .map(bookBot::extendWithJsonStored)
+            .map(bookBot::extendWithAudiobookStoreDetails)
+            .filter(b -> getIgnoredBooks().stream().noneMatch(p -> p.test(b)))
+            .filter(bookBot::isRomance)
+            .filter(bi -> !bookSheet.hasMatch(bookLikeFilter(bi)))
+            .collect(Collectors.toList()));
         if (lastBooks.isEmpty()) {
             System.out.println("No new books which are not already in the spreadsheet.");
             return 0;
         }
         final StringBuilder sb = new StringBuilder();
-        final BookBot bookBot = getBookBot();
         lastBooks
             .forEach(book -> {
                 BookModel model = bookBot.extendAll(book);
@@ -81,6 +101,9 @@ public class LastCommand extends ASheetCommand {
                 }
                 sb.append(DocTabbed.fromBookModel(model)).append(CRLF);
             });
+//        if (isWrite()) {
+//            lastBooks.forEach(bookSheet::save);
+//        }
         System.out.println(sb);
         return 0;
     }
@@ -99,9 +122,10 @@ public class LastCommand extends ASheetCommand {
         private final int count;
 
         @Override
-        public List<BookInformation> filterBooks(final List<BookInformation> books) {
+        public List<BookModel> filterBooks(final List<BookModel> books) {
             return books.stream()
-                .sorted(Comparator.comparing(BookInformation::getPurchaseInstant).reversed())
+                .sorted(Comparator.comparing(BookModel::getDatePurchase).reversed()
+                    .thenComparing(BookModel::getTitle))
                 .limit(count)
                 .collect(Collectors.toList());
         }
@@ -124,7 +148,7 @@ public class LastCommand extends ASheetCommand {
             return null;
         }
 
-        public abstract List<BookInformation> filterBooks(final List<BookInformation> books);
+        public abstract List<BookModel> filterBooks(final List<BookModel> books);
     }
 
     @AllArgsConstructor
@@ -136,18 +160,46 @@ public class LastCommand extends ASheetCommand {
             if (matcher.matches()) {
                 final String days = matcher.group("num");
                 final Duration duration = Duration.ofDays(Long.parseLong(days, 10));
-                return new TimeSpec(Instant.now().minus(duration));
+                return new TimeSpec(LocalDate.from(Instant.now().minus(duration)));
             }
             return null;
         }
 
-        private final Instant since;
+        private final LocalDate since;
 
         @Override
-        public List<BookInformation> filterBooks(final List<BookInformation> books) {
+        public List<BookModel> filterBooks(final List<BookModel> books) {
             return books.stream()
-                .filter(book -> since.isBefore(book.getPurchaseInstant()))
+                .filter(book -> since.isBefore(book.getDatePurchase()))
                 .collect(Collectors.toList());
+        }
+    }
+
+    @SneakyThrows
+    private static List<Predicate<BookModel>> buildIgnoredBooks() {
+        try (
+            final InputStream i = LastCommand.class.getClassLoader().getResourceAsStream(IGNORED_PURCHASES_CSV);
+            final BufferedReader r = new BufferedReader(new InputStreamReader(i))
+        ) {
+            String line;
+            int lineNum = 0;
+            final List<Predicate<BookModel>> ignored = new LinkedList<>();
+            while ((line = r.readLine()) != null) {
+                lineNum++;
+                final String[] parts = line.split("\\|");
+                if (parts.length == 0) {
+                    continue;
+                } else if (parts.length != 2) {
+                    throw new IllegalArgumentException("In " + IGNORED_PURCHASES_CSV + ":" + lineNum + " bogus line: " + line);
+                }
+                final String title = parts[0];
+                final String author = parts[1];
+                if (title == null || title.isBlank() || author == null || author.isBlank()) {
+                    throw new IllegalArgumentException("In " + IGNORED_PURCHASES_CSV + ":" + lineNum + " bogus line: " + line);
+                }
+                ignored.add(b -> StringStuff.fuzzyMatch(b.getTitle(), title) && StringStuff.fuzzyListMatch(b.getAuthorName(), author));
+            }
+            return ignored;
         }
     }
 }

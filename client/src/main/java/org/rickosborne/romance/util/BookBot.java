@@ -123,8 +123,7 @@ public class BookBot {
     ) {
         BookModel model = original;
         model = extendWithAudiobookStorePurchase(model);
-        final BookModel existing = getBookStore().findLikeOrMatch(model, bookLikeFilter(model));
-        model = mergeBooks(existing, model);
+        model = extendWithJsonStored(model);
         model = extendWithAudiobookStoreBookInformation(model);
         model = extendWithAudiobookStoreSuggestion(model);
         model = extendWithAudiobookStoreDetails(model);
@@ -218,6 +217,11 @@ public class BookBot {
         return mergeBooks(original, grModel);
     }
 
+    public BookModel extendWithJsonStored(@NonNull final BookModel original) {
+        final BookModel found = getBookStore().findLikeOrMatch(original, bookLikeFilter(original));
+        return mergeBooks(found, original);
+    }
+
     public BookModel extendWithStoryGraphSearch(
         @NonNull final BookModel original
     ) {
@@ -291,6 +295,10 @@ public class BookBot {
             return Collections.emptyList();
         }
         return info.getAudiobooks().stream().map(BookMerger::modelFromBookInformation).collect(Collectors.toList());
+    }
+
+    public boolean isRomance(final BookModel book) {
+        return getAudiobookStoreHtml().isRomance(book);
     }
 
     public BookModel mergeBooks(

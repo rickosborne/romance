@@ -5,6 +5,7 @@ import com.google.api.services.sheets.v4.model.Sheet;
 import com.google.api.services.sheets.v4.model.Spreadsheet;
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.BooksSheets;
@@ -18,6 +19,7 @@ import org.rickosborne.romance.util.SheetStuff;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -63,13 +65,17 @@ public class SheetStore<M> implements ModelStore<M> {
         return getRecordsById().get(idFromModel(model));
     }
 
+    @Override
+    public Class<M> getModelType() {
+        return dbModel.getModelType();
+    }
+
     public Integer getRowNum(final M model) {
         return Optional.ofNullable(findIndexed(model)).map(SheetStuff.Indexed::getRowNum).orElse(null);
     }
 
-    @Override
-    public Class<M> getModelType() {
-        return dbModel.getModelType();
+    public boolean hasMatch(@NonNull final Predicate<M> predicate) {
+        return stream().anyMatch(predicate);
     }
 
     @Override

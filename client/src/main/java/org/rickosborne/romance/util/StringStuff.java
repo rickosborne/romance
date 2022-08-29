@@ -49,6 +49,18 @@ public class StringStuff {
         return s == null ? null : s.length() > maxLen ? s.substring(0, maxLen) : s;
     }
 
+    public static String ensureToken(final String needle, final String haystack) {
+        if (needle == null) {
+            return haystack;
+        } else if (haystack == null || haystack.isBlank()) {
+            return needle;
+        } else if (haystack.contains(needle)) {
+            return haystack;
+        } else {
+            return (haystack + needle).trim();
+        }
+    }
+
     public static int firstWhitespace(final String s) {
         if (s == null) {
             return -1;
@@ -136,6 +148,16 @@ public class StringStuff {
             map.put(items[i - 1], items[i]);
         }
         return map;
+    }
+
+    public static String removeToken(final String needle, final String haystack) {
+        if (needle == null || haystack == null || haystack.isBlank()) {
+            return haystack;
+        } else if (haystack.contains(needle)) {
+            return haystack.replace(needle, "").trim();
+        } else {
+            return haystack;
+        }
     }
 
     @SafeVarargs

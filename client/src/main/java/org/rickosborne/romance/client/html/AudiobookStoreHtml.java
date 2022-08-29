@@ -27,6 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -35,6 +36,8 @@ import static org.rickosborne.romance.AudiobookStore.MY_LIBRARY_URL;
 import static org.rickosborne.romance.db.model.SchemaAttribute.earlierSameYear;
 import static org.rickosborne.romance.util.MathStuff.doubleFromDuration;
 import static org.rickosborne.romance.util.ModelSetter.setIfEmpty;
+import static org.rickosborne.romance.util.StringStuff.ensureToken;
+import static org.rickosborne.romance.util.StringStuff.removeToken;
 import static org.rickosborne.romance.util.StringStuff.setButNot;
 import static org.rickosborne.romance.util.StringStuff.urlFromString;
 
@@ -42,6 +45,8 @@ import static org.rickosborne.romance.util.StringStuff.urlFromString;
 public class AudiobookStoreHtml {
     private final Path cachePath;
     private final JsonCookieStore cookieStore;
+    public static final Set<String> ROMANCE_GENRES = Set.of("romance", "erotica",
+        "young adult fiction", "fiction", "science fiction", "fantasy");
 
     public AuthorModel getAuthorModelFromBook(@NonNull final URL bookUrl) {
         return getFromBook(AuthorModel.builder().build(), bookUrl, AuthorModelLD.values());
@@ -177,6 +182,16 @@ public class AudiobookStoreHtml {
         wait2.until(ExpectedConditions.visibilityOfElementLocated(By.id("hypTopSubMenu")));
     }
 
+    public boolean isRomance(final BookModel book) {
+        if (book == null) {
+            return false;
+        } else if (book.getGenre() == null) {
+            return true;
+        } else {
+            return !book.getGenre().contains("not a romance");
+        }
+    }
+
     public <T> T withBrowser(final Function<WebDriver, T> block) {
         final WebDriver browser = BrowserStuff.getBrowser();
         try {
@@ -210,9 +225,22 @@ public class AudiobookStoreHtml {
         Isbn2("/mainEntity/isbn", setButNot(BookModel::setIsbn, "null", "")),
         Title("/mainEntity/name", setIfEmpty((b, t) -> b.setTitle(BookStuff.cleanTitle(t)), BookModel::getTitle)),
         Sku("/mainEntity/sku", BookModel::setAudiobookStoreSku),
+        Genre("/mainEntity/genre", BookModelLD::tagAsRomance),
+        Category("/mainEntity/category", BookModelLD::tagAsRomance)
         ;
         private final String ldPath;
         private final BiConsumer<BookModel, String> setter;
+
+        private static void tagAsRomance(final BookModel model, final String genreCategory) {
+            if (genreCategory == null || genreCategory.isBlank()) {
+                return;
+            }
+            if (ROMANCE_GENRES.contains(genreCategory.toLowerCase())) {
+                model.setGenre(removeToken("(not a romance)", model.getGenre()));
+            } else {
+                model.setGenre(ensureToken(" (not a romance)", model.getGenre()));
+            }
+        }
     }
 
     interface LinkedData<M> {
