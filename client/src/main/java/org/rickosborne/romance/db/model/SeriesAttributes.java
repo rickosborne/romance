@@ -8,7 +8,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 public enum SeriesAttributes implements SchemaAttribute<SeriesModel, Object> {
+    audiobookStoreUrl(SeriesModel::getAudiobooksStoreUrl, SeriesModel::setAudiobooksStoreUrl, URL.class),
     goodreadsUrl(SeriesModel::getGoodreadsUrl, SeriesModel::setGoodreadsUrl, URL.class),
+    storyGraphUrl(SeriesModel::getStoryGraphUrl, SeriesModel::setStoryGraphUrl, URL.class),
     name(SeriesModel::getName, SeriesModel::setName, String.class),
     ownedCount(SeriesModel::getOwnedCount, SeriesModel::setOwnedCount, Integer.class),
     ratings(SeriesModel::getRatings, null, Map.class),

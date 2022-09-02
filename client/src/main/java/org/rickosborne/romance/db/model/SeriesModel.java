@@ -15,11 +15,13 @@ import java.util.TreeMap;
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 @JsonIgnoreProperties({"stars"})
 public class SeriesModel {
+    private URL audiobooksStoreUrl;
     private URL goodreadsUrl;
     private String name;
     private Integer ownedCount;
     @JsonPropertyOrder(alphabetic = true)
     private final Map<BookRating, Double> ratings = new TreeMap<>();
+    private URL storyGraphUrl;
 
     public String getStars() {
         return StringStuff.starsFromNumber(ratings.get(BookRating.Overall));

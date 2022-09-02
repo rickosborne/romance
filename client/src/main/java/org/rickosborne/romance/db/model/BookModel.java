@@ -85,6 +85,24 @@ public class BookModel {
         durationHours = Math.round(hours * 100d) / 100d;
     }
 
+    public void setNarratorName(final String name) {
+        if (name == null) {
+            return;
+        }
+        if (narratorName != null && narratorName.length() > name.length()) {
+            return;
+        }
+        narratorName = name;
+    }
+
+    public void setSeriesName(final String updated) {
+        if (updated == null || seriesName != null) {
+            return;
+        }
+        seriesName = updated.replaceAll("(?i)^(a|an|the)\\s+", "")
+            .replaceAll("(?i)\\s+series$", "");
+    }
+
     public String toString() {
         if (title == null && authorName == null) {
             return "<no book>";
