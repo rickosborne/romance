@@ -40,6 +40,9 @@ public class NarratorSheetAdapter implements ModelSheetAdapter<NarratorModel> {
         setters.put("statsTotalDuration", doubleSetter(NarratorModel::setTotalDurationHours));
         setters.put("statsTotalPages", intSetter(NarratorModel::setTotalPages));
         setters.put("statsAvgPph", ModelSetter::setNothing);
+        setters.put("statsBookCount", ModelSetter::setNothing);
+        setters.put("statsMeanBookRating", ModelSetter::setNothing);
+        setters.put("statsReadCount", ModelSetter::setNothing);
         setters.put("statsStars", ModelSetter::setNothing);
         setters.put("genGoodreadsMarkdownLink", ModelSetter::setNothing);
     }
