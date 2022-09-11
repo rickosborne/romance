@@ -149,7 +149,7 @@ public class BookBot {
         if (storeUrl == null) {
             return original;
         }
-        final BookModel storeBook = getAudiobookStoreHtml().getBookModel(storeUrl);
+        final BookModel storeBook = getAudiobookStoreHtml().getBookModelFromBook(storeUrl);
         return mergeBooks(original, storeBook);
     }
 

@@ -17,6 +17,7 @@ import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.util.BookStuff;
 import org.rickosborne.romance.util.BrowserStuff;
+import org.rickosborne.romance.util.Hyperlink;
 import org.rickosborne.romance.util.StringStuff;
 
 import java.net.URL;
@@ -27,9 +28,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.rickosborne.romance.AudiobookStore.DELAY_MS;
 import static org.rickosborne.romance.AudiobookStore.MY_LIBRARY_URL;
@@ -43,33 +46,77 @@ import static org.rickosborne.romance.util.StringStuff.urlFromString;
 
 @RequiredArgsConstructor
 public class AudiobookStoreHtml {
-    private final Path cachePath;
-    private final JsonCookieStore cookieStore;
+    @SuppressWarnings("SpellCheckingInspection")
+    public static final String AUTHOR_LINK_SELECTOR = ".detailpage a[href*='/authors/']";
+    public static final String AUTHOR_NAME_DELIMITER = ", ";
+    @SuppressWarnings("SpellCheckingInspection")
+    public static final String NARRATOR_LINK_SELECTOR = ".detailpage a[href*='/narrators/']";
     public static final Set<String> ROMANCE_GENRES = Set.of("romance", "erotica",
         "young adult fiction", "fiction", "science fiction", "fantasy");
+    @SuppressWarnings("SpellCheckingInspection")
+    public static final String SERIES_LINK_SELECTOR = ".detailpage a[href*='/audiobook-series/']";
 
-    public AuthorModel getAuthorModelFromBook(@NonNull final URL bookUrl) {
-        return getFromBook(AuthorModel.builder().build(), bookUrl, AuthorModelLD.values());
+    protected static List<Hyperlink> collectLinks(final String selector, final HtmlScraper html) {
+        final List<Hyperlink> names = new LinkedList<>();
+        html.selectMany(selector, link -> Optional
+            .ofNullable(Hyperlink.build(link.getOwnText(), link.getAttr("href")))
+            .ifPresent(names::add));
+        return names;
     }
 
-    public BookModel getBookModel(@NonNull final URL url) {
+    protected static Optional<String> collectNames(final String selector, final HtmlScraper html) {
+        final List<Hyperlink> links = collectLinks(selector, html);
+        if (!links.isEmpty()) {
+            final String authorNames = links.stream()
+                .sorted(Hyperlink.SORT_BY_TEXT)
+                .map(Hyperlink::getText)
+                .collect(Collectors.joining(AUTHOR_NAME_DELIMITER));
+            if (!authorNames.isBlank()) {
+                return Optional.of(authorNames);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private final Path cachePath;
+    private final JsonCookieStore cookieStore;
+
+    public List<AuthorModel> getAuthorModelsFromBook(@NonNull final URL bookUrl) {
+        final HtmlScraper scraper = HtmlScraper.forUrl(bookUrl, cachePath);
+        return collectLinks(AUTHOR_LINK_SELECTOR, scraper).stream()
+            .map(link -> AuthorModel.builder()
+                .name(link.getText())
+                .audiobookStoreUrl(link.urlFromHref())
+                .build())
+            .collect(Collectors.toList());
+    }
+
+    public BookModel getBookModelFromBook(@NonNull final URL url) {
         final BookModel book = BookModel.builder().build();
         book.setAudiobookStoreUrl(url);
-        return getFromBook(book, url, BookModelLD.values());
+        return getFromBook(book, url, BookModelLD.values(), BookModelHtml.values());
     }
 
-    protected <M, E extends Enum<E> & LinkedData<M>> M getFromBook(
+    protected <M, E extends Enum<E> & LinkedData<M>, H extends Enum<H> & HtmlData<M>> M getFromBook(
         @NonNull final M model,
         @NonNull final URL bookUrl,
-        @NonNull final E[] ldValues
+        final E[] ldValues,
+        final H[] htmlValues
     ) {
         final HtmlScraper scraper = HtmlScraper.forUrl(bookUrl, cachePath);
         final String ld = scraper.selectOne("script[type=application/ld+json]").getHtml();
         final JsonNode ldNode = DbJsonWriter.readTree(ld);
-        for (final E ldItem : ldValues) {
-            final JsonNode value = ldNode.at(ldItem.getLdPath());
-            if (value != null && value.isTextual()) {
-                ldItem.getSetter().accept(model, value.asText());
+        if (ldValues != null) {
+            for (final E ldItem : ldValues) {
+                final JsonNode value = ldNode.at(ldItem.getLdPath());
+                if (value != null && value.isTextual()) {
+                    ldItem.getSetter().accept(model, value.asText());
+                }
+            }
+        }
+        if (htmlValues != null) {
+            for (final H htmlItem : htmlValues) {
+                htmlItem.getSetter().accept(model, scraper);
             }
         }
         return model;
@@ -203,9 +250,34 @@ public class AudiobookStoreHtml {
 
     @Getter
     @RequiredArgsConstructor
+    enum AuthorModelHtml implements HtmlData<AuthorModel> {
+        AuthorNamesAndLinks((author, html) -> {
+            final Hyperlink link;
+            final List<Hyperlink> links = collectLinks(AUTHOR_LINK_SELECTOR, html);
+            if (links.isEmpty()) {
+                return;
+            } else if (links.size() == 1) {
+                link = links.get(0);
+            } else {
+                link = links.stream()
+                    .filter(l -> StringStuff.fuzzyMatch(l.getText(), author.getName()))
+                    .findAny()
+                    .orElse(null);
+            }
+            if (link != null) {
+                author.setName(link.getText());
+                author.setAudiobookStoreUrl(link.urlFromHref());
+            }
+        }),
+        ;
+        private final BiConsumer<AuthorModel, HtmlScraper> setter;
+    }
+
+    @Getter
+    @RequiredArgsConstructor
     enum AuthorModelLD implements LinkedData<AuthorModel> {
-        AuthorName("/mainEntity/author/name", AuthorModel::setName),
-        TabsLink("/mainEntity/author/url", (a, v) -> a.setAudiobookStoreUrl(urlFromString(v))),
+        //AuthorName("/mainEntity/author/name", AuthorModel::setName),
+        //TabsLink("/mainEntity/author/url", (a, v) -> a.setAudiobookStoreUrl(urlFromString(v))),
         ;
         private final String ldPath;
         private final BiConsumer<AuthorModel, String> setter;
@@ -213,23 +285,33 @@ public class AudiobookStoreHtml {
 
     @Getter
     @RequiredArgsConstructor
+    enum BookModelHtml implements HtmlData<BookModel> {
+        AuthorNames((book, html) -> collectNames(AUTHOR_LINK_SELECTOR, html).ifPresent(book::setAuthorName)),
+        NarratorNames((book, html) -> collectNames(NARRATOR_LINK_SELECTOR, html).ifPresent(book::setNarratorName)),
+        SeriesName((book, html) -> collectNames(SERIES_LINK_SELECTOR, html).ifPresent(book::setSeriesName)),
+        ;
+        private final BiConsumer<BookModel, HtmlScraper> setter;
+    }
+
+    @Getter
+    @RequiredArgsConstructor
     enum BookModelLD implements LinkedData<BookModel> {
-        AuthorName("/mainEntity/author/name", BookModel::setAuthorName),
-        NarratorName("/mainEntity/readBy/name", BookModel::setNarratorName),
+        //AuthorName("/mainEntity/author/name", BookModel::setAuthorName),
+        //NarratorName("/mainEntity/readBy/name", BookModel::setNarratorName),
         DatePublished("/mainEntity/datePublished", (b, d) -> b.setDatePublish(earlierSameYear(b.getDatePublish(), StringStuff.toLocalDate(d)))),
         Duration("/mainEntity/timeRequired", (b, t) -> b.setDurationHours(doubleFromDuration(t))),
         Publisher("/mainEntity/publisher/name", BookModel::setPublisherName),
         PublisherDescription("/mainEntity/description", setIfEmpty(BookModel::setPublisherDescription, BookModel::getPublisherDescription)),
-        Image("/mainEntity/image", (b, i) -> b.setImageUrl(urlFromString(i.replace("-square-400", "-square-1536")))),
+        Image("/mainEntity/image", (b, i) -> b.setImageUrl(urlFromString(i
+            .replace("-square-400", "-square-1536")
+            .replace("._UY630_SR1200,630_", "")
+        ))),
         Gtin13("/mainEntity/gtin13", setButNot(BookModel::setIsbn, "null", "")),
         Isbn2("/mainEntity/isbn", setButNot(BookModel::setIsbn, "null", "")),
         Title("/mainEntity/name", setIfEmpty((b, t) -> b.setTitle(BookStuff.cleanTitle(t)), BookModel::getTitle)),
         Sku("/mainEntity/sku", BookModel::setAudiobookStoreSku),
         Genre("/mainEntity/genre", BookModelLD::tagAsRomance),
-        Category("/mainEntity/category", BookModelLD::tagAsRomance)
-        ;
-        private final String ldPath;
-        private final BiConsumer<BookModel, String> setter;
+        Category("/mainEntity/category", BookModelLD::tagAsRomance);
 
         private static void tagAsRomance(final BookModel model, final String genreCategory) {
             if (genreCategory == null || genreCategory.isBlank()) {
@@ -241,6 +323,13 @@ public class AudiobookStoreHtml {
                 model.setGenre(ensureToken(" (not a romance)", model.getGenre()));
             }
         }
+
+        private final String ldPath;
+        private final BiConsumer<BookModel, String> setter;
+    }
+
+    interface HtmlData<M> {
+        BiConsumer<M, HtmlScraper> getSetter();
     }
 
     interface LinkedData<M> {

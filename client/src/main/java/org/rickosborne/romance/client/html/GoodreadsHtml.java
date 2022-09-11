@@ -16,7 +16,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.rickosborne.romance.util.ModelSetter.setIfEmpty;
-import static org.rickosborne.romance.util.StringStuff.setButNot;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -55,7 +54,7 @@ public class GoodreadsHtml {
         goodreadsUrl((b, u) -> b.setGoodreadsUrl(StringStuff.urlFromString(u)), "link[rel=canonical]", "href"),
         imageUrl((b, u) -> b.setImageUrl(StringStuff.urlFromString(u)), "meta[property=og:image]", "content"),
         imageUrlTwitter((b, u) -> b.setImageUrl(StringStuff.urlFromString(u)), "meta[property=twitter:image]", "content"),
-        isbn(setButNot(BookModel::setIsbn, "null", ""), "meta[property=books:isbn]", "content"),
+        //isbn(setIfEmpty(setButNot(BookModel::setIsbn, "null", ""), BookModel::getIsbn), "meta[property=books:isbn]", "content"),
         pages((b, p) -> b.setPages(Integer.parseInt(p, 10)), "meta[property=books:page_count]", "content"),
         pagesDetails((b, p) -> b.setPages(Integer.parseInt(p, 10)), "#details [itemprop=numberOfPages]", s -> s.getHtml().replace(" pages", "").replace(" page", "")),
         publisherDescription(setIfEmpty(BookModel::setPublisherDescription, BookModel::getPublisherDescription), "#description span[style]", HtmlScraper::getText),
