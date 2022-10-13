@@ -42,4 +42,13 @@ public class AuthorModel {
     private URL storyGraphUrl;
     private String twitterName;
     private URL twitterUrl;
+
+    @Override
+    public String toString() {
+        return (name == null ? "<no name>" : name)
+            + (pronouns == null ? "" : " (" + pronouns + ")")
+            + (audiobookStoreUrl == null ? "" : " TABS")
+            + (storyGraphUrl == null ? "" : " SG")
+            + (goodreadsUrl == null ? "" : " GR");
+    }
 }

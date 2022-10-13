@@ -2,6 +2,7 @@ package org.rickosborne.romance.client.command;
 
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.sheets.v4.Sheets;
+import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
 import com.google.api.services.sheets.v4.model.CellData;
 import com.google.api.services.sheets.v4.model.ExtendedValue;
 import com.google.api.services.sheets.v4.model.GridCoordinate;
@@ -33,6 +34,7 @@ import org.rickosborne.romance.util.StringStuff;
 import picocli.CommandLine;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.Month;
@@ -55,6 +57,8 @@ public abstract class ASheetCommand implements Callable<Integer> {
     private Path cachePath;
     @Getter(lazy = true)
     private final AudiobookStoreHtml audiobookStoreHtml = new AudiobookStoreHtml(getCachePath(), null);
+    @Getter(value = AccessLevel.PROTECTED)
+    private final List<Request> changeRequests = new LinkedList<>();
     @Getter(value = AccessLevel.PROTECTED)
     private final Map<String, Function<String, Object>> coerceFieldFunctions = Map.of(
         "isbn", s -> s
@@ -130,7 +134,11 @@ public abstract class ASheetCommand implements Callable<Integer> {
         if (userId == null || userId.isBlank()) {
             throw new IllegalArgumentException("UserID is required");
         }
-        return doWithSheets();
+        final Integer result = doWithSheets();
+        if (result == null || result == 0) {
+            writeChangesIfRequested();
+        }
+        return result;
     }
 
     protected List<Request> changeRequestsFromModelChanges(final Sheet sheet, final Map<String, Integer> colNums, final int rowNum, final Map<String, String> changes) {
@@ -191,6 +199,20 @@ public abstract class ASheetCommand implements Callable<Integer> {
     }
 
     abstract protected Integer doWithSheets();
+
+    protected void writeChangesIfRequested() {
+        if (isWrite() && !changeRequests.isEmpty()) {
+            final BatchUpdateSpreadsheetRequest updateSpreadsheetRequest = new BatchUpdateSpreadsheetRequest()
+                .setRequests(changeRequests);
+            try {
+                getSpreadsheets().batchUpdate(getSpreadsheet().getSpreadsheetId(), updateSpreadsheetRequest).execute();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } finally {
+                changeRequests.clear();
+            }
+        }
+    }
 
 
     @Value

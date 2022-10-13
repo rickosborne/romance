@@ -1,6 +1,5 @@
 package org.rickosborne.romance.client.command;
 
-import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
 import com.google.api.services.sheets.v4.model.Request;
 import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
@@ -11,9 +10,7 @@ import org.rickosborne.romance.util.BookBot;
 import org.rickosborne.romance.util.SheetStuff;
 import picocli.CommandLine;
 
-import java.io.IOException;
 import java.net.URL;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -33,8 +30,8 @@ public class FillFromTABSCommand extends ASheetCommand {
         if (requireTabsUrl) {
             log.info("Requiring TABS URL.  Will not expand.");
         }
+        final List<Request> changeRequests = getChangeRequests();
         final AudiobookStoreHtml audiobookStoreHtml = getAudiobookStoreHtml();
-        final List<Request> changeRequests = new LinkedList<>();
         final DataSet<BookModel> bookData = new DataSet<>(DbModel.Book);
         final DataSet<AuthorModel> authorData = new DataSet<>(DbModel.Author);
         final BookBot bookBot = getBookBot();
@@ -70,15 +67,6 @@ public class FillFromTABSCommand extends ASheetCommand {
                         }
                     }
                 }
-            }
-        }
-        if (isWrite() && !changeRequests.isEmpty()) {
-            final BatchUpdateSpreadsheetRequest updateSpreadsheetRequest = new BatchUpdateSpreadsheetRequest()
-                .setRequests(changeRequests);
-            try {
-                getSpreadsheets().batchUpdate(getSpreadsheet().getSpreadsheetId(), updateSpreadsheetRequest).execute();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
             }
         }
         return null;

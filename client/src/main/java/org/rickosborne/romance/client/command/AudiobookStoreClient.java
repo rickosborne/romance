@@ -24,7 +24,8 @@ import java.util.logging.LogManager;
         WishlistCommand.class,
         FillFromTABSCommand.class,
         StoryGraphFromSheetCommand.class,
-        InferCommand.class
+        InferCommand.class,
+        MoreFromAuthorsCommand.class,
     }
 )
 public class AudiobookStoreClient implements Callable<Integer> {

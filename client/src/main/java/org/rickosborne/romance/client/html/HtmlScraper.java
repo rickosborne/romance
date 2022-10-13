@@ -1,8 +1,10 @@
 package org.rickosborne.romance.client.html;
 
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -55,7 +57,10 @@ public class HtmlScraper {
         @NonNull final URL url,
         @NonNull final Path cachePath
     ) {
-        return forUrlWithDelay(url, cachePath, null, null, null);
+        return scrape(Scrape.builder()
+            .url(url)
+            .cachePath(cachePath)
+            .build());
     }
 
     public static HtmlScraper forUrlWithCookies(
@@ -63,7 +68,11 @@ public class HtmlScraper {
         @NonNull final Path cachePath,
         @NonNull final JsonCookieStore cookieStore
     ) {
-        return forUrlWithDelay(url, cachePath, null, cookieStore, null);
+        return scrape(Scrape.builder()
+            .url(url)
+            .cachePath(cachePath)
+            .cookieStore(cookieStore)
+            .build());
     }
 
     public static HtmlScraper forUrlWithDelay(
@@ -73,32 +82,13 @@ public class HtmlScraper {
         final JsonCookieStore cookieStore,
         final Map<String, String> headers
     ) {
-        try {
-            if (cachePath != null) {
-                final Document cachedDoc = fromCache(url, cachePath);
-                if (cachedDoc != null) {
-                    return new HtmlScraper(cachePath, cookieStore, cachedDoc);
-                }
-                if (delay != null) {
-                    Thread.sleep(delay);
-                }
-            }
-            Fetched.log.info(url.toString());
-            final Document liveDoc = Jsoup.connect(url.toString())
-                .cookieStore(cookieStore)
-                .headers(Optional.ofNullable(headers).orElseGet(Collections::emptyMap))
-                .timeout(TIMEOUT_MS)
-                .get();
-            if (cachePath != null) {
-                final String fileName = StringStuff.cacheName(url) + HTML_FILE_EXTENSION;
-                try (final FileWriter fw = new FileWriter(cachePath.resolve(fileName).toFile())) {
-                    fw.write(liveDoc.outerHtml());
-                }
-            }
-            return new HtmlScraper(cachePath, cookieStore, liveDoc);
-        } catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+        return scrape(Scrape.builder()
+            .url(url)
+            .cachePath(cachePath)
+            .delay(delay)
+            .cookieStore(cookieStore)
+            .headers(headers)
+            .build());
     }
 
     public static HtmlScraper forUrlWithHeaders(
@@ -106,16 +96,37 @@ public class HtmlScraper {
         @NonNull final Path cachePath,
         @NonNull final Map<String, String> headers
     ) {
-        return forUrlWithDelay(url, cachePath, null, null, headers);
+        return scrape(Scrape.builder()
+            .url(url)
+            .cachePath(cachePath)
+            .headers(headers)
+            .build());
     }
 
-    protected static Document fromCache(@NonNull final URL url, @NonNull final Path cachePath) {
+    protected static Document fromCache(
+        @NonNull final URL url,
+        @NonNull final Path cachePath,
+        final Duration maxAge
+    ) {
         final String fileName = StringStuff.cacheName(url) + HTML_FILE_EXTENSION;
         final File file = cachePath.resolve(fileName).toFile();
         if (!cachePath.toFile().exists()) {
-            cachePath.toFile().mkdirs();
+            if (!cachePath.toFile().mkdirs()) {
+                log.warn("Could not create cachePath: " + cachePath);
+            }
         }
         if (file.isFile()) {
+            if (maxAge != null) {
+                final long lastModMS = file.lastModified();
+                final Instant lastModInstant = Instant.ofEpochMilli(lastModMS);
+                if (lastModInstant.plus(maxAge).isBefore(Instant.now())) {
+                    log.info("Cache is out of date: " + file);
+                    if (!file.delete()) {
+                        log.warn("Could not delete: " + file);
+                    }
+                    return null;
+                }
+            }
             try {
                 Cached.log.info(url.toString());
                 return Jsoup.parse(file);
@@ -140,6 +151,35 @@ public class HtmlScraper {
                 .cookies(requestExtras.getCookies())
                 .post();
         } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static HtmlScraper scrape(@NonNull final Scrape scrape) {
+        try {
+            if (scrape.cachePath != null) {
+                final Document cachedDoc = fromCache(scrape.url, scrape.cachePath, scrape.maxAge);
+                if (cachedDoc != null) {
+                    return new HtmlScraper(scrape.cachePath, scrape.cookieStore, cachedDoc);
+                }
+                if (scrape.delay != null) {
+                    Thread.sleep(scrape.delay);
+                }
+            }
+            Fetched.log.info(scrape.url.toString());
+            final Document liveDoc = Jsoup.connect(scrape.url.toString())
+                .cookieStore(scrape.cookieStore)
+                .headers(Optional.ofNullable(scrape.headers).orElseGet(Collections::emptyMap))
+                .timeout(TIMEOUT_MS)
+                .get();
+            if (scrape.cachePath != null) {
+                final String fileName = StringStuff.cacheName(scrape.url) + HTML_FILE_EXTENSION;
+                try (final FileWriter fw = new FileWriter(scrape.cachePath.resolve(fileName).toFile())) {
+                    fw.write(liveDoc.outerHtml());
+                }
+            }
+            return new HtmlScraper(scrape.cachePath, scrape.cookieStore, liveDoc);
+        } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
@@ -203,19 +243,10 @@ public class HtmlScraper {
                 if (descendents != null) {
                     return new HtmlScraper(cachePath, cookieStore, parent);
                 }
-                el = parent;
             }
+            el = parent;
         }
         return empty();
-    }
-
-    public void selectMany(@NonNull final String selector, @NonNull Consumer<HtmlScraper> eachBlock) {
-        if (element == null) {
-            return;
-        }
-        for (final Element el : element.select(selector)) {
-            eachBlock.accept(new HtmlScraper(cachePath, cookieStore, el));
-        }
     }
 
     public HtmlScraper selectFirst(@NonNull final String selector) {
@@ -227,6 +258,15 @@ public class HtmlScraper {
             return empty();
         } else {
             return new HtmlScraper(cachePath, cookieStore, elements.first());
+        }
+    }
+
+    public void selectMany(@NonNull final String selector, @NonNull Consumer<HtmlScraper> eachBlock) {
+        if (element == null) {
+            return;
+        }
+        for (final Element el : element.select(selector)) {
+            eachBlock.accept(new HtmlScraper(cachePath, cookieStore, el));
         }
     }
 
@@ -274,8 +314,21 @@ public class HtmlScraper {
     }
 
     @Slf4j
-    public static class Cached {}
+    public static class Cached {
+    }
 
     @Slf4j
-    public static class Fetched {}
+    public static class Fetched {
+    }
+
+    @Value
+    @Builder
+    public static class Scrape {
+        Path cachePath;
+        JsonCookieStore cookieStore;
+        Integer delay;
+        Map<String, String> headers;
+        Duration maxAge;
+        @NonNull URL url;
+    }
 }

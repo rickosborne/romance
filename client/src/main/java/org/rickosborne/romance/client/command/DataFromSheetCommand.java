@@ -1,7 +1,5 @@
 package org.rickosborne.romance.client.command;
 
-import com.google.api.services.sheets.v4.Sheets;
-import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
 import com.google.api.services.sheets.v4.model.Request;
 import com.google.api.services.sheets.v4.model.Sheet;
 import com.google.api.services.sheets.v4.model.Spreadsheet;
@@ -15,8 +13,6 @@ import org.rickosborne.romance.sheet.ModelSheetAdapter;
 import org.rickosborne.romance.util.SheetStuff;
 import picocli.CommandLine;
 
-import java.io.IOException;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,7 +27,7 @@ public class DataFromSheetCommand extends ASheetCommand {
     @Override
     protected Integer doWithSheets() {
         for (final DbModel dbModel : DbModel.values()) {
-            pullTab(dbModel, getSpreadsheet(), getSpreadsheets());
+            pullTab(dbModel, getSpreadsheet());
         }
         System.out.println("data-from-sheet -p " + getDbPath());
         return null;
@@ -39,8 +35,7 @@ public class DataFromSheetCommand extends ASheetCommand {
 
     private <M> void pullTab(
         final DbModel dbModel,
-        final Spreadsheet spreadsheet,
-        final Sheets.Spreadsheets spreadsheets
+        final Spreadsheet spreadsheet
     ) {
         final String tabTitle = dbModel.getTabTitle();
         final Sheet sheet = BooksSheets.sheetTitled(tabTitle, spreadsheet);
@@ -53,7 +48,7 @@ public class DataFromSheetCommand extends ASheetCommand {
         final String[] colKeys = sheetDescriptor.getColumnKeys();
         final Map<String, Integer> colNums = IntStream.range(0, colKeys.length).boxed().collect(Collectors.toMap(i -> colKeys[i], i -> i));
         System.out.println(tabTitle + ": " + String.join(", ", colKeys));
-        final List<Request> changeRequests = new LinkedList<>();
+        final List<Request> changeRequests = getChangeRequests();
         for (final SheetStuff.Indexed<M> indexed : sheetStore.getRecords()) {
             final int rowNum = indexed.getRowNum();
             final M record = indexed.getModel();
@@ -63,20 +58,12 @@ public class DataFromSheetCommand extends ASheetCommand {
                 final Map<String, String> changes = sheetAdapter.findChangesToSheet(record, updated);
                 if (!changes.isEmpty()) {
                     System.out.println("~~~ " + jsonStore.idFromModel(existing));
-                    System.out.println(changes);
+                    // System.out.println(changes);
                     changeRequests.addAll(changeRequestsFromModelChanges(sheet, colNums, rowNum, changes));
                 }
             }
             jsonStore.saveIfChanged(updated);
         }
-        if (isWrite() && !changeRequests.isEmpty()) {
-            final BatchUpdateSpreadsheetRequest updateSpreadsheetRequest = new BatchUpdateSpreadsheetRequest()
-                .setRequests(changeRequests);
-            try {
-                spreadsheets.batchUpdate(spreadsheet.getSpreadsheetId(), updateSpreadsheetRequest).execute();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
+        writeChangesIfRequested();
     }
 }

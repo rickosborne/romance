@@ -3,6 +3,7 @@ package org.rickosborne.romance.sheet;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.Diff;
@@ -19,6 +20,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Slf4j
 public class AuthorSheetAdapter implements ModelSheetAdapter<AuthorModel> {
     private final static ModelSetter<AuthorModel> AMS = new ModelSetter<>() {
     };
@@ -44,6 +46,7 @@ public class AuthorSheetAdapter implements ModelSheetAdapter<AuthorModel> {
             .filter(c -> c.getOperation() == Diff.Operation.Add || c.getOperation() == Diff.Operation.Change)
             .map(c -> Pair.build(c, sfByAttr.get((AuthorAttributes) c.getAttribute())))
             .filter(p -> p.hasRight() && p.getLeft().getAfterValue() != null)
+            .peek(p -> System.out.printf("%s: %s => %s%n", p.getRight().name(), p.getLeft().getBeforeValue(), p.getLeft().getAfterValue()))
             .collect(Collectors.toMap(p -> p.getRight().name(), p -> p.getLeft().getAfterValue().toString()));
     }
 

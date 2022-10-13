@@ -29,6 +29,7 @@ public class Google {
     public static final GsonFactory JSON_FACTORY = getDefaultInstance();
     public static final List<String> SCOPES = List.of(SheetsScopes.SPREADSHEETS);
     public static final Path TOKENS_FILE_DEFAULT = Path.of(".credentials");
+    public static final Path STORED_CREDENTIAL_PATH = TOKENS_FILE_DEFAULT.resolve("StoredCredential");
 
     public static Credential getCredentials(@NonNull final String userId) {
         return getCredentials(userId, CREDENTIALS_PATH_DEFAULT);
@@ -73,5 +74,15 @@ public class Google {
             log.error(String.format("Could not open HTTP transport: %s", e.getMessage()));
             throw new RuntimeException(e);
         }
+    }
+
+    public static Credential regenerateCredentials(@NonNull final String userId) {
+        final File credsFile = STORED_CREDENTIAL_PATH.toFile();
+        if (credsFile.isFile()) {
+            if (!credsFile.delete()) {
+                log.warn("Could not delete: {}", credsFile);
+            }
+        }
+        return getCredentials(userId);
     }
 }

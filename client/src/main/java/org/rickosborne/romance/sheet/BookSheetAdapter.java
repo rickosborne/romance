@@ -3,6 +3,7 @@ package org.rickosborne.romance.sheet;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.Diff;
@@ -22,6 +23,7 @@ import java.util.stream.Stream;
 
 import static org.rickosborne.romance.util.StringStuff.setButNot;
 
+@Slf4j
 public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
     private final static ModelSetter<BookModel> BS = new ModelSetter<>() {
     };
@@ -56,6 +58,7 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
             .filter(c -> c.getOperation() == Diff.Operation.Add || c.getOperation() == Diff.Operation.Change)
             .map(c -> Pair.build(c, sfByAttr.get((BookAttributes) c.getAttribute())))
             .filter(p -> p.hasRight() && p.getLeft().getAfterValue() != null)
+            .peek(p -> System.out.printf("%s: %s => %s%n", p.getRight().name(), p.getLeft().getBeforeValue(), p.getLeft().getAfterValue()))
             .collect(Collectors.toMap(p -> p.getRight().name(), p -> p.getLeft().getAfterValue().toString()));
     }
 
@@ -125,6 +128,9 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
         tag5(BS.stringSetter(BS.ifNotNull((m, s) -> m.getTags().add(s)))),
         tag6(BS.stringSetter(BS.ifNotNull((m, s) -> m.getTags().add(s)))),
         tag7(BS.stringSetter(BS.ifNotNull((m, s) -> m.getTags().add(s)))),
+        tag8(BS.stringSetter(BS.ifNotNull((m, s) -> m.getTags().add(s)))),
+        tag9(BS.stringSetter(BS.ifNotNull((m, s) -> m.getTags().add(s)))),
+        tag10(BS.stringSetter(BS.ifNotNull((m, s) -> m.getTags().add(s)))),
         genTagsJoined(ModelSetter::setNothing),
         rateCharacters(BS.doubleSetter(BS.ifNotNull((m, s) -> m.getRatings().put(BookRating.CharacterDepth, s)))),
         rateGrowth(BS.doubleSetter(BS.ifNotNull((m, s) -> m.getRatings().put(BookRating.CharacterGrowth, s)))),

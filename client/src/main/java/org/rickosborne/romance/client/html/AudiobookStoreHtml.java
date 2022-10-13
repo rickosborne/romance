@@ -49,12 +49,17 @@ public class AudiobookStoreHtml {
     @SuppressWarnings("SpellCheckingInspection")
     public static final String AUTHOR_LINK_SELECTOR = ".detailpage a[href*='/authors/']";
     public static final String AUTHOR_NAME_DELIMITER = ", ";
+    public static final Duration MAX_AGE = Duration.ofDays(90);
     @SuppressWarnings("SpellCheckingInspection")
     public static final String NARRATOR_LINK_SELECTOR = ".detailpage a[href*='/narrators/']";
     public static final Set<String> ROMANCE_GENRES = Set.of("romance", "erotica",
         "young adult fiction", "fiction", "science fiction", "fantasy");
     @SuppressWarnings("SpellCheckingInspection")
     public static final String SERIES_LINK_SELECTOR = ".detailpage a[href*='/audiobook-series/']";
+
+    public static String biggerImage(final String imgSrc) {
+        return imgSrc == null ? null : imgSrc.replace("-square-400.", "-square-1536.");
+    }
 
     protected static List<Hyperlink> collectLinks(final String selector, final HtmlScraper html) {
         final List<Hyperlink> names = new LinkedList<>();
@@ -82,7 +87,12 @@ public class AudiobookStoreHtml {
     private final JsonCookieStore cookieStore;
 
     public List<AuthorModel> getAuthorModelsFromBook(@NonNull final URL bookUrl) {
-        final HtmlScraper scraper = HtmlScraper.forUrl(bookUrl, cachePath);
+        final HtmlScraper scraper = HtmlScraper.scrape(HtmlScraper.Scrape.builder()
+            .url(bookUrl)
+            .cachePath(cachePath)
+            .delay(DELAY_MS)
+            .maxAge(MAX_AGE)
+            .build());
         return collectLinks(AUTHOR_LINK_SELECTOR, scraper).stream()
             .map(link -> AuthorModel.builder()
                 .name(link.getText())
@@ -97,13 +107,64 @@ public class AudiobookStoreHtml {
         return getFromBook(book, url, BookModelLD.values(), BookModelHtml.values());
     }
 
+    public List<BookModel> getBooksForAuthor(final AuthorModel authorModel) {
+        final List<BookModel> books = new LinkedList<>();
+        if (authorModel == null || authorModel.getAudiobookStoreUrl() == null) {
+            return books;
+        }
+        final HtmlScraper scraper = HtmlScraper.scrape(HtmlScraper.Scrape.builder()
+            .url(authorModel.getAudiobookStoreUrl())
+            .cachePath(cachePath)
+            .delay(DELAY_MS)
+            .maxAge(MAX_AGE)
+            .build());
+        scraper.selectMany(".features-books-cat", bookList -> {
+            bookList.selectMany(".slide", slide -> {
+                final BookModel book = BookModel.build();
+                book.setAuthorName(authorModel.getName());
+                slide.selectMany(".title a", link -> {
+                    book.setTitle(link.getAttr("title").trim());
+                    book.setAudiobookStoreUrl(StringStuff.urlFromString(link.getAttr("href").trim()));
+                });
+                slide.selectMany("img.pro-img.categoryImage", img -> {
+                    book.setImageUrl(StringStuff.urlFromString(biggerImage(img.getAttr("src").trim())));
+                });
+                slide.selectMany(".catimgcont a.trigger[data]", trigger -> {
+                    final String data = trigger.getAttr("data").trim();
+                    book.setAudiobookStoreSku(trigger.getAttr("dataSKU"));
+                    if (data != null) {
+                        final String[] parts = data.split("\\|");
+                        if (parts.length >= 11) {
+                            if (book.getTitle() == null) {
+                                book.setTitle(parts[0].trim());
+                            }
+                            if (book.getNarratorName() == null) {
+                                book.setNarratorName(parts[3].trim());
+                            }
+                            if (book.getAudiobookStoreUrl() == null) {
+                                book.setAudiobookStoreUrl(StringStuff.urlFromString(parts[9].trim()));
+                            }
+                        }
+                    }
+                });
+                books.add(book);
+            });
+        });
+        return books;
+    }
+
     protected <M, E extends Enum<E> & LinkedData<M>, H extends Enum<H> & HtmlData<M>> M getFromBook(
         @NonNull final M model,
         @NonNull final URL bookUrl,
         final E[] ldValues,
         final H[] htmlValues
     ) {
-        final HtmlScraper scraper = HtmlScraper.forUrl(bookUrl, cachePath);
+        final HtmlScraper scraper = HtmlScraper.scrape(HtmlScraper.Scrape.builder()
+            .url(bookUrl)
+            .cachePath(cachePath)
+            .delay(DELAY_MS)
+            .maxAge(MAX_AGE)
+            .build());
         final String ld = scraper.selectOne("script[type=application/ld+json]").getHtml();
         final JsonNode ldNode = DbJsonWriter.readTree(ld);
         if (ldValues != null) {

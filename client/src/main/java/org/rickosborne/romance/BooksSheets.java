@@ -1,8 +1,10 @@
 package org.rickosborne.romance;
 
 import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.auth.oauth2.TokenResponseException;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.Sheets.Spreadsheets;
 import com.google.api.services.sheets.v4.model.Sheet;
 import com.google.api.services.sheets.v4.model.Spreadsheet;
@@ -40,7 +42,7 @@ public interface BooksSheets {
 
     static Spreadsheets getSpreadsheets(final String userId) {
         try {
-            return new com.google.api.services.sheets.v4.Sheets.Builder(
+            final Spreadsheets spreadsheets = new Sheets.Builder(
                 GoogleNetHttpTransport.newTrustedTransport(),
                 GsonFactory.getDefaultInstance(),
                 getSheetsCredential(userId)
@@ -48,7 +50,11 @@ public interface BooksSheets {
                 .setApplicationName(BooksSheets.class.getPackageName())
                 .build()
                 .spreadsheets();
+            return spreadsheets;
         } catch (GeneralSecurityException | IOException e) {
+            if (e instanceof TokenResponseException && "invalid_grant".equals(((TokenResponseException) e).getDetails().get("error_code"))) {
+                Google.regenerateCredentials(userId);
+            }
             throw new RuntimeException(e);
         }
     }
