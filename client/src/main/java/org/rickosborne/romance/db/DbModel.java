@@ -5,6 +5,7 @@ import lombok.NonNull;
 import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.model.NarratorModel;
+import org.rickosborne.romance.db.model.RedditPostModel;
 import org.rickosborne.romance.db.model.SeriesModel;
 import org.rickosborne.romance.db.model.TagModel;
 import org.rickosborne.romance.db.model.WatchModel;
@@ -26,12 +27,27 @@ public enum DbModel {
     Series("series", "Series", SeriesModel.class, SeriesModel::new, SeriesSheetAdapter.class),
     Tag("tag", "Tags", TagModel.class, TagModel::new, TagSheetAdapter.class),
     Watch("watch", "Watchlist", WatchModel.class, WatchModel::new, WatchSheetAdapter.class),
+    RedditPost("redditPost", RedditPostModel.class, RedditPostModel::new),
     ;
     private final Class<? extends ModelSheetAdapter<?>> adapterType;
+    private final DbModelType dbModelType;
     private final Class<?> modelType;
     private final Supplier<?> supplier;
     private final String tabTitle;
     private final String typeName;
+
+    <M> DbModel(
+        @NonNull final String typeName,
+        @NonNull final Class<M> modelType,
+        @NonNull final Supplier<M> supplier
+    ) {
+        this.typeName = typeName;
+        this.modelType = modelType;
+        this.supplier = supplier;
+        this.adapterType = null;
+        this.tabTitle = null;
+        this.dbModelType = DbModelType.Reddit;
+    }
 
     <M, A extends ModelSheetAdapter<M>> DbModel(
         @NonNull final String typeName,
@@ -45,6 +61,7 @@ public enum DbModel {
         this.supplier = supplier;
         this.adapterType = adapterType;
         this.tabTitle = tabTitle;
+        this.dbModelType = DbModelType.DocSheet;
     }
 
     public <M> M buildModel() {
@@ -55,5 +72,10 @@ public enum DbModel {
     public <M> Class<M> getModelType() {
         @SuppressWarnings("unchecked") final Class<M> t = (Class<M>) modelType;
         return t;
+    }
+
+    public enum DbModelType {
+        DocSheet,
+        Reddit,
     }
 }

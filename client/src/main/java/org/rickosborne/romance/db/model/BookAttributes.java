@@ -1,5 +1,6 @@
 package org.rickosborne.romance.db.model;
 
+import lombok.Getter;
 import lombok.NonNull;
 
 import java.net.URL;
@@ -12,7 +13,8 @@ import java.util.function.Function;
 
 import static org.rickosborne.romance.util.StringStuff.setButNot;
 
-public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
+@Getter
+public enum BookAttributes implements EnumSchemaAttribute<BookModel> {
     audiobookStoreSku(BookModel::getAudiobookStoreSku, BookModel::setAudiobookStoreSku, String.class, SchemaAttribute::keepIfNotNull),
     audiobookStoreUrl(BookModel::getAudiobookStoreUrl, BookModel::setAudiobookStoreUrl, URL.class, SchemaAttribute::keepIfNotNull),
     authorName(BookModel::getAuthorName, BookModel::setAuthorName, String.class, SchemaAttribute::keepIfNotNull),
@@ -60,7 +62,8 @@ public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
 
     private final Function<BookModel, ?> accessor;
     private final BiFunction<Object, Object, Object> attributeChooser;
-    private final Class<?> attributeType;
+    private final Class<Object> attributeType;
+    private final Class<BookModel> modelType = BookModel.class;
     private final BiConsumer<BookModel, Object> mutator;
 
     <T> BookAttributes(final Function<BookModel, T> accessor, final BiConsumer<BookModel, T> mutator, final Class<T> attributeType) {
@@ -76,7 +79,8 @@ public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
         this.accessor = accessor;
         @SuppressWarnings("unchecked") final BiConsumer<BookModel, Object> typedMutator = (BiConsumer<BookModel, Object>) mutator;
         this.mutator = typedMutator;
-        this.attributeType = attributeType;
+        @SuppressWarnings("unchecked") final Class<Object> objectAttributeType = (Class<Object>) attributeType;
+        this.attributeType = objectAttributeType;
         @SuppressWarnings("unchecked") final BiFunction<Object, Object, Object> typedChooser = (BiFunction<Object, Object, Object>) attributeChooser;
         this.attributeChooser = typedChooser;
     }
@@ -84,29 +88,9 @@ public enum BookAttributes implements SchemaAttribute<BookModel, Object> {
     @Override
     public Object chooseAttributeValue(final Object left, final Object right) {
         if (attributeChooser == null || left == null || right == null) {
-            return SchemaAttribute.super.chooseAttributeValue(left, right);
+            return EnumSchemaAttribute.super.chooseAttributeValue(left, right);
         }
         return attributeChooser.apply(left, right);
-    }
-
-    public Object getAttribute(@NonNull final BookModel model) {
-        return accessor.apply(model);
-    }
-
-    @Override
-    public String getAttributeName() {
-        return name();
-    }
-
-    @Override
-    public Class<Object> getAttributeType() {
-        @SuppressWarnings("unchecked") final Class<Object> typed = (Class<Object>) attributeType;
-        return typed;
-    }
-
-    @Override
-    public Class<BookModel> getModelType() {
-        return BookModel.class;
     }
 
     public void setAttribute(@NonNull final BookModel model, final Object value) {

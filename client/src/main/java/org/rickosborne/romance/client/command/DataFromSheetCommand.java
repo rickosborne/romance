@@ -35,7 +35,9 @@ public class DataFromSheetCommand extends ASheetCommand {
     @Override
     protected Integer doWithSheets() {
         for (final DbModel dbModel : DbModel.values()) {
-            pullTab(dbModel, getSpreadsheet());
+            if (DbModel.DbModelType.DocSheet == dbModel.getDbModelType()) {
+                pullTab(dbModel, getSpreadsheet());
+            }
         }
         System.out.println("data-from-sheet -p " + getDbPath());
         return null;

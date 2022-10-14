@@ -1,12 +1,13 @@
 package org.rickosborne.romance.db.model;
 
-import lombok.NonNull;
+import lombok.Getter;
 
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public enum TagAttributes implements SchemaAttribute<TagModel, Object> {
+@Getter
+public enum TagAttributes implements EnumSchemaAttribute<TagModel> {
     description(TagModel::getDescription, TagModel::setDescription, String.class),
     name(TagModel::getName, TagModel::setName, String.class),
     ownedCount(TagModel::getOwnedCount, TagModel::setOwnedCount, Integer.class),
@@ -18,43 +19,15 @@ public enum TagAttributes implements SchemaAttribute<TagModel, Object> {
     ratings(TagModel::getRatings, null, Map.class),
     ;
     private final Function<TagModel, ?> accessor;
-    private final Class<?> attributeType;
+    private final Class<Object> attributeType;
+    private final Class<TagModel> modelType = TagModel.class;
     private final BiConsumer<TagModel, Object> mutator;
 
     <T> TagAttributes(final Function<TagModel, T> accessor, final BiConsumer<TagModel, T> mutator, final Class<T> attributeType) {
         this.accessor = accessor;
         @SuppressWarnings("unchecked") final BiConsumer<TagModel, Object> typedMutator = (BiConsumer<TagModel, Object>) mutator;
         this.mutator = typedMutator;
-        this.attributeType = attributeType;
-    }
-
-    public Object getAttribute(@NonNull final TagModel model) {
-        return accessor.apply(model);
-    }
-
-    @Override
-    public String getAttributeName() {
-        return name();
-    }
-
-    @Override
-    public Class<Object> getAttributeType() {
-        @SuppressWarnings("unchecked") final Class<Object> typed = (Class<Object>) attributeType;
-        return typed;
-    }
-
-    @Override
-    public Class<TagModel> getModelType() {
-        return TagModel.class;
-    }
-
-    public void setAttribute(@NonNull final TagModel model, final Object value) {
-        if (mutator == null) {
-            throw new NullPointerException("TagModel cannot set " + name());
-        }
-        if ((value != null) && !attributeType.isInstance(value)) {
-            throw new IllegalArgumentException(String.format("Expected %s but found %s", attributeType.getSimpleName(), value.getClass().getSimpleName()));
-        }
-        mutator.accept(model, value);
+        @SuppressWarnings("unchecked") final Class<Object> objectAttributeType = (Class<Object>) attributeType;
+        this.attributeType = objectAttributeType;
     }
 }

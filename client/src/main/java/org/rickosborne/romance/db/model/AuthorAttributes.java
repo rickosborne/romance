@@ -1,6 +1,6 @@
 package org.rickosborne.romance.db.model;
 
-import lombok.NonNull;
+import lombok.Getter;
 import org.rickosborne.romance.util.YesNoUnknown;
 
 import java.net.URL;
@@ -8,7 +8,8 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public enum AuthorAttributes implements SchemaAttribute<AuthorModel, Object> {
+@Getter
+public enum AuthorAttributes implements EnumSchemaAttribute<AuthorModel> {
     audiobookStoreUrl(AuthorModel::getAudiobookStoreUrl, AuthorModel::setAudiobookStoreUrl, URL.class),
     dnfCount(AuthorModel::getDnfCount, AuthorModel::setDnfCount, Integer.class),
     fiveStarCount(AuthorModel::getFiveStarCount, AuthorModel::setFiveStarCount, Integer.class),
@@ -33,43 +34,15 @@ public enum AuthorAttributes implements SchemaAttribute<AuthorModel, Object> {
     twitterUrl(AuthorModel::getTwitterUrl, AuthorModel::setTwitterUrl, URL.class),
     ;
     private final Function<AuthorModel, ?> accessor;
-    private final Class<?> attributeType;
+    private final Class<Object> attributeType;
+    private final Class<AuthorModel> modelType = AuthorModel.class;
     private final BiConsumer<AuthorModel, Object> mutator;
 
     <T> AuthorAttributes(final Function<AuthorModel, T> accessor, final BiConsumer<AuthorModel, T> mutator, final Class<T> attributeType) {
         this.accessor = accessor;
         @SuppressWarnings("unchecked") final BiConsumer<AuthorModel, Object> typedMutator = (BiConsumer<AuthorModel, Object>) mutator;
         this.mutator = typedMutator;
-        this.attributeType = attributeType;
-    }
-
-    public Object getAttribute(@NonNull final AuthorModel model) {
-        return accessor.apply(model);
-    }
-
-    @Override
-    public String getAttributeName() {
-        return name();
-    }
-
-    @Override
-    public Class<Object> getAttributeType() {
-        @SuppressWarnings("unchecked") final Class<Object> typed = (Class<Object>) attributeType;
-        return typed;
-    }
-
-    @Override
-    public Class<AuthorModel> getModelType() {
-        return AuthorModel.class;
-    }
-
-    public void setAttribute(@NonNull final AuthorModel model, final Object value) {
-        if (mutator == null) {
-            throw new NullPointerException("AuthorModel cannot set " + name());
-        }
-        if ((value != null) && !attributeType.isInstance(value)) {
-            throw new IllegalArgumentException(String.format("Expected %s but found %s", attributeType.getSimpleName(), value.getClass().getSimpleName()));
-        }
-        mutator.accept(model, value);
+        @SuppressWarnings("unchecked") final Class<Object> objectAttributeType = (Class<Object>) attributeType;
+        this.attributeType = objectAttributeType;
     }
 }

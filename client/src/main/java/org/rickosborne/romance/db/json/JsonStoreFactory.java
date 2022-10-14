@@ -9,6 +9,7 @@ import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.model.ModelSchema;
 import org.rickosborne.romance.db.model.ModelSchemas;
 import org.rickosborne.romance.db.model.NarratorModel;
+import org.rickosborne.romance.db.model.RedditPostModel;
 import org.rickosborne.romance.db.model.SeriesModel;
 import org.rickosborne.romance.db.model.TagModel;
 import org.rickosborne.romance.db.model.WatchModel;
@@ -26,7 +27,7 @@ public class JsonStoreFactory {
     ) {
         final Class<M> modelType = dbModel.getModelType();
         final ModelSchema<M> modelSchema = ModelSchemas.schemaForModelType(modelType);
-        return new JsonStore<M>(dbModel, modelSchema, modelType, namingConvention, dbPath.resolve(dbModel.getTypeName()));
+        return new JsonStore<>(dbModel, modelSchema, modelType, namingConvention, dbPath.resolve(dbModel.getTypeName()));
     }
 
     private final Path dbPath;
@@ -52,11 +53,12 @@ public class JsonStoreFactory {
         Series(SeriesModel.class, DbModel.Series),
         Tag(TagModel.class, DbModel.Tag),
         Watch(WatchModel.class, DbModel.Watch),
+        RedditPost(RedditPostModel.class, DbModel.RedditPost),
         ;
         private final DbModel dbModel;
         private final Class<?> modelType;
 
-        <M, S extends JsonStore<M>> StoreModel(
+        <M> StoreModel(
             @NonNull final Class<M> modelType,
             @NonNull final DbModel dbModel
         ) {
