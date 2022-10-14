@@ -4,14 +4,17 @@ import lombok.NonNull;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.Diff;
+import org.rickosborne.romance.db.SchemaDiff;
 import org.rickosborne.romance.db.model.SchemaAttribute;
 import org.rickosborne.romance.util.ModelSetter;
+import org.rickosborne.romance.util.Pair;
 
 import java.net.URL;
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public interface ModelSheetAdapter<M> extends ModelSetter<M> {
@@ -27,7 +30,22 @@ public interface ModelSheetAdapter<M> extends ModelSetter<M> {
     }
 
     default Map<String, String> findChangesToSheet(@NonNull final M sheetRecord, @NonNull final M existingRecord) {
-        return Collections.emptyMap();
+        return findChangesToSheet(sheetRecord, existingRecord, null);
+    }
+
+    default Map<String, String> findChangesToSheet(
+        @NonNull final M sheetRecord,
+        @NonNull final M existingRecord,
+        final Predicate<SchemaAttribute<M, ?>> attributePredicate
+    ) {
+        final Map<SchemaAttribute<M, ?>, ModelSetter<M>> sheetFields = getSheetFields();
+        return new SchemaDiff().diffModels(sheetRecord, existingRecord).getChanges().stream()
+            .filter(c -> c.getOperation() == Diff.Operation.Add || c.getOperation() == Diff.Operation.Change)
+            .filter(c -> attributePredicate == null || attributePredicate.test(c.getAttribute()))
+            .map(c -> Pair.build(c, sheetFields.get(c.getAttribute())))
+            .filter(p -> p.hasRight() && p.getLeft().getAfterValue() != null)
+            .peek(p -> System.out.printf("%s: %s => %s%n", ((Enum<?>) p.getRight()).name(), p.getLeft().getBeforeValue(), p.getLeft().getAfterValue()))
+            .collect(Collectors.toMap(p -> ((Enum<?>) p.getRight()).name(), p -> p.getLeft().getAfterValue().toString()));
     }
 
     DbModel getDbModel();
@@ -38,6 +56,7 @@ public interface ModelSheetAdapter<M> extends ModelSetter<M> {
 
     Map<String, BiConsumer<M, Object>> getSetters();
 
+    Map<SchemaAttribute<M, ?>, ModelSetter<M>> getSheetFields();
 
     default void putSetters(
         @NonNull final Map<String, BiConsumer<M, Object>> setters,

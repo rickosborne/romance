@@ -6,13 +6,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
-import org.rickosborne.romance.db.Diff;
-import org.rickosborne.romance.db.SchemaDiff;
 import org.rickosborne.romance.db.model.BookAttributes;
 import org.rickosborne.romance.db.model.BookModel;
+import org.rickosborne.romance.db.model.SchemaAttribute;
 import org.rickosborne.romance.util.BookRating;
 import org.rickosborne.romance.util.ModelSetter;
-import org.rickosborne.romance.util.Pair;
 
 import java.time.LocalDate;
 import java.util.Map;
@@ -29,16 +27,17 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
     };
     public static final String DNF_SENTINEL = "DNF";
     public static final String READING_SENTINEL = "reading";
-    private static final Map<BookAttributes, SheetFields> sfByAttr = Stream
-        .of(SheetFields.values())
-        .filter(sf -> sf.bookAttribute != null && sf.safeToWriteToSheet)
-        .collect(Collectors.toMap(sf -> sf.bookAttribute, sf -> sf));
     @Getter
     private final DbModel dbModel = DbModel.Book;
     @Getter
     private final Map<String, BiConsumer<BookModel, Object>> setters = Stream
         .of(SheetFields.values())
         .collect(Collectors.toMap(Enum::name, sf -> sf.setter));
+    @Getter
+    private final Map<SchemaAttribute<BookModel, ?>, ModelSetter<BookModel>> sheetFields = Stream
+        .of(SheetFields.values())
+        .filter(sf -> sf.bookAttribute != null && sf.safeToWriteToSheet)
+        .collect(Collectors.toMap(sf -> sf.bookAttribute, sf -> sf));
 
     @Override
     public String fileNameForModel(
@@ -50,16 +49,6 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
             Optional.ofNullable(model.getDatePublish()).map(LocalDate::getYear).map(String::valueOf).orElse(""),
             model.getTitle()
         );
-    }
-
-    @Override
-    public Map<String, String> findChangesToSheet(@NonNull final BookModel sheetBook, @NonNull final BookModel existing) {
-        return new SchemaDiff().diffModels(sheetBook, existing).getChanges().stream()
-            .filter(c -> c.getOperation() == Diff.Operation.Add || c.getOperation() == Diff.Operation.Change)
-            .map(c -> Pair.build(c, sfByAttr.get((BookAttributes) c.getAttribute())))
-            .filter(p -> p.hasRight() && p.getLeft().getAfterValue() != null)
-            .peek(p -> System.out.printf("%s: %s => %s%n", p.getRight().name(), p.getLeft().getBeforeValue(), p.getLeft().getAfterValue()))
-            .collect(Collectors.toMap(p -> p.getRight().name(), p -> p.getLeft().getAfterValue().toString()));
     }
 
     @RequiredArgsConstructor

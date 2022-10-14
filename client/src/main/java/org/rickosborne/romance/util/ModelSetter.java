@@ -11,6 +11,25 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 public interface ModelSetter<M> {
+    static <T, U> BiConsumer<T, U> setIfEmpty(
+        @NonNull final BiConsumer<T, U> setter,
+        @NonNull final Function<T, U> getter
+    ) {
+        return (target, updatedU) -> {
+            if (target == null || updatedU == null) {
+                return;
+            }
+            final U previousU = getter.apply(target);
+            boolean shouldUpdate = previousU == null;
+            if (previousU instanceof String && !((String) previousU).isBlank()) {
+                shouldUpdate = false;
+            }
+            if (shouldUpdate) {
+                setter.accept(target, updatedU);
+            }
+        };
+    }
+
     static <M> void setNothing(final M model, final Object unused) {
     }
 
@@ -113,25 +132,6 @@ public interface ModelSetter<M> {
                         throw new IllegalArgumentException("Not a URL: " + s, e);
                     }
                 }
-            }
-        };
-    }
-
-    static <T, U> BiConsumer<T, U> setIfEmpty(
-        @NonNull final BiConsumer<T, U> setter,
-        @NonNull final Function<T, U> getter
-    ) {
-        return (target, updatedU) -> {
-            if (target == null || updatedU == null) {
-                return;
-            }
-            final U previousU = getter.apply(target);
-            boolean shouldUpdate = previousU == null;
-            if (previousU instanceof String && !((String) previousU).isBlank()) {
-                shouldUpdate = false;
-            }
-            if (shouldUpdate) {
-                setter.accept(target, updatedU);
             }
         };
     }

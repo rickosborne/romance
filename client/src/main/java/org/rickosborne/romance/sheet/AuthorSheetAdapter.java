@@ -6,13 +6,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
-import org.rickosborne.romance.db.Diff;
-import org.rickosborne.romance.db.SchemaDiff;
 import org.rickosborne.romance.db.model.AuthorAttributes;
 import org.rickosborne.romance.db.model.AuthorModel;
+import org.rickosborne.romance.db.model.SchemaAttribute;
 import org.rickosborne.romance.util.BookRating;
 import org.rickosborne.romance.util.ModelSetter;
-import org.rickosborne.romance.util.Pair;
 import org.rickosborne.romance.util.YesNoUnknown;
 
 import java.util.Map;
@@ -24,30 +22,21 @@ import java.util.stream.Stream;
 public class AuthorSheetAdapter implements ModelSheetAdapter<AuthorModel> {
     private final static ModelSetter<AuthorModel> AMS = new ModelSetter<>() {
     };
-    private static final Map<AuthorAttributes, SheetFields> sfByAttr = Stream
-        .of(SheetFields.values())
-        .filter(sf -> sf.authorAttribute != null && sf.safeToWriteToSheet)
-        .collect(Collectors.toMap(sf -> sf.authorAttribute, sf -> sf));
     @Getter
     private final DbModel dbModel = DbModel.Author;
     @Getter
     private final Map<String, BiConsumer<AuthorModel, Object>> setters = Stream
         .of(SheetFields.values())
         .collect(Collectors.toMap(Enum::name, sf -> sf.setter));
+    @Getter
+    private final Map<SchemaAttribute<AuthorModel, ?>, ModelSetter<AuthorModel>> sheetFields = Stream
+        .of(SheetFields.values())
+        .filter(sf -> sf.authorAttribute != null && sf.safeToWriteToSheet)
+        .collect(Collectors.toMap(sf -> sf.authorAttribute, sf -> sf));
 
     @Override
     public String fileNameForModel(final @NonNull AuthorModel model, final @NonNull NamingConvention namingConvention) {
         return namingConvention.fileNameFromTexts(model.getName());
-    }
-
-    @Override
-    public Map<String, String> findChangesToSheet(@NonNull final AuthorModel sheetAuthor, @NonNull final AuthorModel existing) {
-        return new SchemaDiff().diffModels(sheetAuthor, existing).getChanges().stream()
-            .filter(c -> c.getOperation() == Diff.Operation.Add || c.getOperation() == Diff.Operation.Change)
-            .map(c -> Pair.build(c, sfByAttr.get((AuthorAttributes) c.getAttribute())))
-            .filter(p -> p.hasRight() && p.getLeft().getAfterValue() != null)
-            .peek(p -> System.out.printf("%s: %s => %s%n", p.getRight().name(), p.getLeft().getBeforeValue(), p.getLeft().getAfterValue()))
-            .collect(Collectors.toMap(p -> p.getRight().name(), p -> p.getLeft().getAfterValue().toString()));
     }
 
     @RequiredArgsConstructor

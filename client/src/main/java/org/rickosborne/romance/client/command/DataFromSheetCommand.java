@@ -7,7 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.json.JsonStore;
+import org.rickosborne.romance.db.model.BookAttributes;
 import org.rickosborne.romance.db.model.ModelSchema;
+import org.rickosborne.romance.db.model.SchemaAttribute;
 import org.rickosborne.romance.db.sheet.SheetStore;
 import org.rickosborne.romance.sheet.ModelSheetAdapter;
 import org.rickosborne.romance.util.SheetStuff;
@@ -15,6 +17,8 @@ import picocli.CommandLine;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -24,6 +28,10 @@ import java.util.stream.IntStream;
     description = "Pull and materialize the Sheet data to JSON files"
 )
 public class DataFromSheetCommand extends ASheetCommand {
+    private final Map<DbModel, Set<SchemaAttribute<?, ?>>> skipAttributes = Map.of(
+        DbModel.Book, Set.of(BookAttributes.goodreadsUrl)
+    );
+
     @Override
     protected Integer doWithSheets() {
         for (final DbModel dbModel : DbModel.values()) {
@@ -37,6 +45,8 @@ public class DataFromSheetCommand extends ASheetCommand {
         final DbModel dbModel,
         final Spreadsheet spreadsheet
     ) {
+        final Set<SchemaAttribute<?, ?>> skippedAttributes = skipAttributes.get(dbModel);
+        final Predicate<SchemaAttribute<M, ?>> skipPredicate = skippedAttributes == null ? null : a -> !skippedAttributes.contains(a);
         final String tabTitle = dbModel.getTabTitle();
         final Sheet sheet = BooksSheets.sheetTitled(tabTitle, spreadsheet);
         final ModelSheetAdapter<M> sheetAdapter = getAdapterFactory().adapterByName(dbModel.getTabTitle());
@@ -55,7 +65,7 @@ public class DataFromSheetCommand extends ASheetCommand {
             final M existing = jsonStore.findLikeFromCache(record);
             final M updated = modelSchema.mergeModels(existing, record);
             if (existing != null) {
-                final Map<String, String> changes = sheetAdapter.findChangesToSheet(record, updated);
+                final Map<String, String> changes = sheetAdapter.findChangesToSheet(record, updated, skipPredicate);
                 if (!changes.isEmpty()) {
                     System.out.println("~~~ " + jsonStore.idFromModel(existing));
                     // System.out.println(changes);
