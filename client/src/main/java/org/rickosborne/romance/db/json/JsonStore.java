@@ -61,6 +61,9 @@ public class JsonStore<M> implements ModelStore<M>, Iterable<M> {
 
     @Override
     public M findByIdFromCache(final String id) {
+        if (id == null) {
+            return null;
+        }
         final File file = fileForId(id);
         return loadFromFile(file);
     }

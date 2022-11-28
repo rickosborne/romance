@@ -47,6 +47,7 @@ public class AuthorSheetAdapter implements ModelSheetAdapter<AuthorModel> {
         authorStorygraphLink(AuthorAttributes.storyGraphUrl, true, AMS.urlSetter(AuthorModel::setStoryGraphUrl)),
         authorSiteLink(AuthorAttributes.siteUrl, true, AMS.urlSetter(AuthorModel::setSiteUrl)),
         authorTwitter(AuthorAttributes.twitterName, false, AMS.stringSetter(AuthorModel::setTwitterName)),
+        authorMastodon(AuthorAttributes.mastodonHandle, true, AMS.stringSetter(AuthorModel::setMastodonHandle)),
         authorPronouns(AuthorAttributes.pronouns, false, AMS.stringSetter(AuthorModel::setPronouns)),
         authorQueer(AuthorAttributes.queer, false, AMS.stringSetter((m, q) -> m.setQueer(YesNoUnknown.fromString(q)))),
         authorBookCount(AuthorAttributes.ownedCount, false, AMS.intSetter(AuthorModel::setOwnedCount)),

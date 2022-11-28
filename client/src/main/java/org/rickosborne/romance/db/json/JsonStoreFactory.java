@@ -3,6 +3,7 @@ package org.rickosborne.romance.db.json;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import org.rickosborne.romance.NamingConvention;
+import org.rickosborne.romance.client.reddit.RedditPostStore;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
@@ -53,7 +54,16 @@ public class JsonStoreFactory {
         Series(SeriesModel.class, DbModel.Series),
         Tag(TagModel.class, DbModel.Tag),
         Watch(WatchModel.class, DbModel.Watch),
-        RedditPost(RedditPostModel.class, DbModel.RedditPost),
+        RedditPost(RedditPostModel.class, DbModel.RedditPost) {
+            @Override
+            <M, S extends JsonStore<M>> S buildStore(
+                final NamingConvention namingConvention,
+                final Path typePath
+            ) {
+                @SuppressWarnings("unchecked") final S typed = (S) new RedditPostStore(RedditPostStore.RedditPostType.Submission, namingConvention, typePath);
+                return typed;
+            }
+        },
         ;
         private final DbModel dbModel;
         private final Class<?> modelType;

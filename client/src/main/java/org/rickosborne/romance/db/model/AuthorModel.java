@@ -24,6 +24,7 @@ public class AuthorModel {
     private Integer fiveStarCount;
     private Integer fourStarPlusCount;
     private URL goodreadsUrl;
+    private String mastodonHandle;
     private Double maxRating;
     private Double meanDurationHours;
     private Double meanPages;

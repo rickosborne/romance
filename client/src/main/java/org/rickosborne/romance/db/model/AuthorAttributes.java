@@ -15,6 +15,7 @@ public enum AuthorAttributes implements EnumSchemaAttribute<AuthorModel> {
     fiveStarCount(AuthorModel::getFiveStarCount, AuthorModel::setFiveStarCount, Integer.class),
     fourStarPlusCount(AuthorModel::getFourStarPlusCount, AuthorModel::setFourStarPlusCount, Integer.class),
     goodreadsUrl(AuthorModel::getGoodreadsUrl, AuthorModel::setGoodreadsUrl, URL.class),
+    mastodonHandle(AuthorModel::getMastodonHandle, AuthorModel::setMastodonHandle, String.class),
     maxRating(AuthorModel::getMaxRating, AuthorModel::setMaxRating, Double.class),
     meanDurationHours(AuthorModel::getMeanDurationHours, AuthorModel::setMeanDurationHours, Double.class),
     meanPages(AuthorModel::getMeanPages, AuthorModel::setMeanPages, Double.class),

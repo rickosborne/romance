@@ -26,6 +26,9 @@ import java.util.logging.LogManager;
         StoryGraphFromSheetCommand.class,
         InferCommand.class,
         MoreFromAuthorsCommand.class,
+        RedditWDYRCommand.class,
+        BookWyrmCoversCommand.class,
+        BookWyrmImportCsvFromSheetCommand.class,
     }
 )
 public class AudiobookStoreClient implements Callable<Integer> {

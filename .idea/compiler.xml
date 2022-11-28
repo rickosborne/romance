@@ -21,14 +21,11 @@
         <module name="audiobookstore-client" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="client" target="11" />
-    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_STRING" value="-Xlint:unchecked" />
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="audiobookstore-client" options="-Aproject=org.rickosborne.romance/audiobookstore-client" />
-      <module name="client" options="-Aproject=org.rickosborne.audiobookstore/audiobookstore-client" />
     </option>
   </component>
 </project>

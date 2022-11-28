@@ -34,7 +34,9 @@ public class StringStuff {
         return s
             .toLowerCase()
             .replace("'", "")
-            .replaceAll("[^a-z\\d]+", " ");
+            .replaceAll("\\b(a|an|the)\\b", "")
+            .replaceAll("[^a-z\\d]+", " ")
+            .trim();
     }
 
     public static String cacheName(@NonNull final URL url) {
@@ -43,6 +45,15 @@ public class StringStuff {
             url.getHost().replace("www.", ""),
             url.getPath().replaceAll("\\W+", "-")
         );
+    }
+
+    public static String coalesceNonBlank(final String... items) {
+        for (final String item : items) {
+            if (item != null && !item.isBlank()) {
+                return item;
+            }
+        }
+        return null;
     }
 
     public static String ellipsize(final String s, final int maxLen) {

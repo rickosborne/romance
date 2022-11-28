@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.NonNull;
 
 import java.net.URL;
+import java.util.Date;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -12,6 +13,9 @@ public enum RedditPostAttributes implements EnumSchemaAttribute<RedditPostModel>
     authorName(RedditPostModel::getAuthorName, RedditPostModel::setAuthorName, String.class),
     body(RedditPostModel::getBody, RedditPostModel::setBody, String.class),
     id(RedditPostModel::getId, RedditPostModel::setId, String.class),
+    parentId(RedditPostModel::getParentFullName, RedditPostModel::setParentFullName, String.class),
+    score(RedditPostModel::getScore, RedditPostModel::setScore, Integer.class),
+    updated(RedditPostModel::getUpdated, RedditPostModel::setUpdated, Date.class),
     url(RedditPostModel::getUrl, RedditPostModel::setUrl, URL.class),
     ;
     private final Function<RedditPostModel, ?> accessor;
