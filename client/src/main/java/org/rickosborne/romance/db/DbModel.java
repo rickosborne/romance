@@ -78,4 +78,13 @@ public enum DbModel {
         DocSheet,
         Reddit,
     }
+
+    public static DbModel forModelType(@NonNull final Class<?> modelType) {
+        for (final DbModel dbModel : DbModel.values()) {
+            if (modelType == dbModel.modelType) {
+                return dbModel;
+            }
+        }
+        throw new IllegalArgumentException("Not a DbModel type: " + modelType.getSimpleName());
+    }
 }

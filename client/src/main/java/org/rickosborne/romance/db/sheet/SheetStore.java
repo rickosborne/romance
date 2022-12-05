@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.db.DbModel;
@@ -16,6 +17,7 @@ import org.rickosborne.romance.db.model.ModelSchema;
 import org.rickosborne.romance.sheet.ModelSheetAdapter;
 import org.rickosborne.romance.util.SheetStuff;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,7 +28,7 @@ import java.util.stream.Stream;
 @Slf4j
 @Getter(value = AccessLevel.PROTECTED)
 @RequiredArgsConstructor
-public class SheetStore<M> implements ModelStore<M> {
+public class SheetStore<M> implements ModelStore<M>, Iterable<M> {
 
     @Getter
     private final DbModel dbModel;
@@ -85,6 +87,14 @@ public class SheetStore<M> implements ModelStore<M> {
             return null;
         }
         return getNamingConvention().fileNameFromTexts(parts.stream());
+    }
+
+    @NotNull
+    @Override
+    public Iterator<M> iterator() {
+        return getRecords().stream()
+            .map(SheetStuff.Indexed::getModel)
+            .iterator();
     }
 
     @Override

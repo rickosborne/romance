@@ -1,5 +1,6 @@
 package org.rickosborne.romance.db.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -12,6 +13,7 @@ import org.rickosborne.romance.util.BookRating;
 import org.rickosborne.romance.util.StringStuff;
 
 import java.net.URL;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Set;
@@ -46,6 +48,7 @@ public class BookModel {
     private String isbn;
     private String like;
     private String location;
+    private URL mastodonUrl;
     private final MainChar mc1 = new MainChar();
     private final MainChar mc2 = new MainChar();
     private String narratorName;
@@ -72,6 +75,16 @@ public class BookModel {
     private final Set<String> tags = new TreeSet<>();
     private String title;
     private String warnings;
+
+    @JsonIgnore
+    public String getDurationText() {
+        if (durationHours == null || durationHours == 0) {
+            return null;
+        }
+        final Duration duration = Duration.ofMinutes(Math.round(durationHours * 60d));
+        final int minutes = duration.toMinutesPart();
+        return duration.toHoursPart() + ":" + (minutes < 10 ? "0" : "") + minutes;
+    }
 
     @SuppressWarnings("unused")  // Jackson
     public String getStars() {

@@ -29,6 +29,7 @@ import java.util.logging.LogManager;
         RedditWDYRCommand.class,
         BookWyrmCoversCommand.class,
         BookWyrmImportCsvFromSheetCommand.class,
+        BookWyrmPGSyncCommand.class,
     }
 )
 public class AudiobookStoreClient implements Callable<Integer> {
