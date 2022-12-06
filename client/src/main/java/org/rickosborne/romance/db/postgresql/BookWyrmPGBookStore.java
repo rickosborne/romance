@@ -65,28 +65,6 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
         super(config, BookModel.class);
     }
 
-    public Double addRating(
-        @NonNull final BookModel book,
-        final int bookId,
-        final int userId
-    ) {
-        return queryOne(
-            "SELECT r.rating " +
-                "FROM bookwyrm_review AS r " +
-                "  INNER JOIN bookwyrm_status AS s ON (r.book_id = ?) AND (r.status_ptr_id = s.id) AND (s.user_id = ?) " +
-                "LIMIT 1",
-            ps -> {
-                ps.setInt(1, bookId);
-                ps.setInt(2, userId);
-            },
-            rs -> {
-                final double rating = rs.getDouble("rating");
-                book.getRatings().put(BookRating.Overall, rating);
-                return rating;
-            }
-        );
-    }
-
     public List<Integer> allIdsFor(final int dbId) {
         final Set<Integer> set = new HashSet<>();
         set.add(dbId);
@@ -131,6 +109,18 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
         );
     }
 
+    public List<String> findAuthorNamesForDbId(final int dbId) {
+        return query(
+            "SELECT " +
+                "  a.name " +
+                "FROM bookwyrm_book_authors AS ba " +
+                "  INNER JOIN bookwyrm_author AS a ON (ba.book_id = ?) AND (ba.author_id = a.id) " +
+                "ORDER BY name ",
+            ps -> ps.setInt(1, dbId),
+            rs -> rs.getString("name")
+        );
+    }
+
     public Shelf findBookShelf(final int dbId, final int userId) {
         return queryOne(
             "SELECT s.id, s.name, s.identifier " +
@@ -149,7 +139,7 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
         );
     }
 
-    public BookModel findByDbId(final int dbId) {
+    public BookModel findByDbIdAndUser(final int dbId, final Integer userId) {
         final Pair<BookModel, Integer> pair = queryOne(
             "SELECT * " +
                 "FROM bookwyrm_book " +
@@ -157,7 +147,32 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
             ps -> ps.setInt(1, dbId),
             this::fromResultSet
         );
-        return pair == null ? null : pair.getLeft();
+        final BookModel book = pair == null ? null : pair.getLeft();
+        if (book == null) {
+            return null;
+        }
+        final List<String> authorNames = findAuthorNamesForDbId(dbId);
+        if (authorNames != null && !authorNames.isEmpty()) {
+            book.setAuthorName(String.join(", ", authorNames));
+        }
+        for (final Pair<String, URL> linkPair : findLinksForDbId(dbId)) {
+            final String domain = linkPair.getLeft();
+            final URL url = linkPair.getRight();
+            if ("audiobookstore.com".equals(domain)) {
+                book.setAudiobookStoreUrl(url);
+            } else if ("goodreads.com".equals(domain)) {
+                book.setGoodreadsUrl(url);
+            } else if ("thestorygraph.com".equals(domain)) {
+                book.setStorygraphUrl(url);
+            }
+        }
+        if (userId != null) {
+            final Double rating = findRating(dbId, userId);
+            if (rating != null) {
+                book.getRatings().put(BookRating.Overall, rating);
+            }
+        }
+        return book;
     }
 
     @Override
@@ -166,63 +181,15 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
         if (dbId == null) {
             return null;
         }
-        final int finalDbId = dbId;
-        final Pair<BookModel, Integer> pair = queryOne(
-            "SELECT * " +
-                "FROM bookwyrm_book " +
-                "WHERE (id = ?)",
-            ps -> ps.setInt(1, finalDbId),
-            this::fromResultSet
-        );
-        if (pair == null) {
-            return null;
-        }
-        final BookModel book = pair.getLeft();
-        final List<String> authorNames = query(
-            "SELECT " +
-                "  a.name " +
-                "FROM bookwyrm_book_authors AS ba " +
-                "  INNER JOIN bookwyrm_author AS a ON (ba.book_id = ?) AND (ba.author_id = a.id) " +
-                "ORDER BY name ",
-            ps -> ps.setInt(1, finalDbId),
-            rs -> rs.getString("name")
-        );
-        if (authorNames != null && !authorNames.isEmpty()) {
-            book.setAuthorName(String.join(", ", authorNames));
-        }
-        query(
-            "SELECT bl.url, bld.domain " +
-                "FROM bookwyrm_link AS bl " +
-                "  INNER JOIN bookwyrm_linkdomain AS bld ON (bl.domain_id = bld.id) AND (bld.domain IN ('audiobookstore.com', 'goodreads.com', 'thestorygraph.com')) " +
-                "WHERE (bl.id = ?) ",
-            ps -> ps.setInt(1, finalDbId),
-            rs -> {
-                final String domain = rs.getString("domain");
-                final URL url = urlFromString(rs.getString("url"));
-                if ("audiobookstore.com".equals(domain)) {
-                    book.setAudiobookStoreUrl(url);
-                } else if ("goodreads.com".equals(domain)) {
-                    book.setGoodreadsUrl(url);
-                } else if ("thestorygraph.com".equals(domain)) {
-                    book.setStorygraphUrl(url);
-                }
-                return null;
-            }
-        );
-        return book;
-    }
-
-    @Override
-    public BookModel findByIdFromCache(final String id) {
-        return findById(id);
+        return findByDbIdAndUser(dbId, null);
     }
 
     @Override
     public BookModel findLike(final BookModel model) {
-        return Optional.ofNullable(findLikeWithDbId(model, null)).map(Pair::getLeft).orElse(null);
+        return Optional.ofNullable(findLikeForUser(model, null)).map(Pair::getLeft).orElse(null);
     }
 
-    public Pair<BookModel, Integer> findLikeWithDbId(final BookModel model, final Integer userId) {
+    public Pair<BookModel, Integer> findLikeForUser(final BookModel model, final Integer userId) {
         if (model == null) {
             return null;
         }
@@ -251,11 +218,39 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
             },
             rs -> rs.getInt("id")
         );
-        final BookModel book = findByDbId(bookId);
-        if (book != null) {
-            addRating(book, bookId, userId);
-        }
-        return Pair.build(book, bookId);
+        return Pair.build(findByDbIdAndUser(bookId, userId), bookId);
+    }
+
+    public List<Pair<String, URL>> findLinksForDbId(final int dbId) {
+        return Optional.ofNullable(query(
+            "SELECT l.url, ld.name " +
+                "FROM bookwyrm_filelink AS fl " +
+                "  INNER JOIN bookwyrm_link AS l ON (fl.book_id = ?) AND (fl.link_ptr_id = l.id) " +
+                "  INNER JOIN bookwyrm_linkdomain AS ld ON (l.domain_id = ld.id) ",
+            ps -> ps.setInt(1, dbId),
+            rs -> {
+                final String domain = rs.getString("name");
+                final URL url = urlFromString(rs.getString("url"));
+                return Pair.build(domain, url);
+            }
+        )).orElseGet(List::of);
+    }
+
+    public Double findRating(
+        final int bookId,
+        final int userId
+    ) {
+        return queryOne(
+            "SELECT r.rating " +
+                "FROM bookwyrm_review AS r " +
+                "  INNER JOIN bookwyrm_status AS s ON (r.book_id = ?) AND (r.status_ptr_id = s.id) AND (s.user_id = ?) " +
+                "LIMIT 1",
+            ps -> {
+                ps.setInt(1, bookId);
+                ps.setInt(2, userId);
+            },
+            rs -> rs.getDouble("rating")
+        );
     }
 
     private Pair<BookModel, Integer> fromResultSet(final ResultSet rs) throws SQLException {
