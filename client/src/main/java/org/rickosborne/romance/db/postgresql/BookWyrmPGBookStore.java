@@ -218,6 +218,9 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
             },
             rs -> rs.getInt("id")
         );
+        if (bookId == null) {
+            return null;
+        }
         return Pair.build(findByDbIdAndUser(bookId, userId), bookId);
     }
 

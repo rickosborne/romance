@@ -7,6 +7,7 @@ import org.rickosborne.romance.client.BookWyrmService;
 import org.rickosborne.romance.client.bookwyrm.BookWyrmConfig;
 import org.rickosborne.romance.client.bookwyrm.Shelf;
 import org.rickosborne.romance.client.response.BookWyrmBook;
+import org.rickosborne.romance.db.FingerprintStore;
 import org.rickosborne.romance.db.json.JsonStore;
 import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
@@ -57,8 +58,9 @@ public class BookWyrmCoversCommand extends ASheetCommand {
     private final BookWyrmConfig bookWyrmConfig = BookWyrmConfig.getInstance();
     private final BookWyrmService bookWyrmService = BookWyrmService.build(bookWyrmConfig);
     private final BookWyrmService bookWyrmServiceForHtml = BookWyrmService.buildForHtml(bookWyrmConfig);
+    private final FingerprintStore<BookModel> fingerprintStore = new FingerprintStore<>(BookModel.class, "bw-covers-sheet");
 
-    protected void addBook(
+    protected Integer addBook(
         @NonNull final BookModel book,
         @NonNull final BookWyrmPGAuthorStore pgAuthorStore,
         @NonNull final BookWyrmPGBookStore pgBookStore
@@ -129,11 +131,8 @@ public class BookWyrmCoversCommand extends ASheetCommand {
         }
         if (bookId != null) {
             pgBookStore.getIdCache().forceId(pgBookStore.idFromModel(book), bookId);
-            final BookModel pgBook = pgBookStore.findByDbIdAndUser(bookId, bookWyrmConfig.getUserId());
-            fixGoodreadsId(pgBook, book, List.of(bookId), pgBookStore);
-            fixTabsUrl(pgBook, book, bookId);
-            fixRating(bookId, book.getRatings().get(BookRating.Overall), pgBook);
         }
+        return bookId;
     }
 
     @Override
@@ -145,6 +144,9 @@ public class BookWyrmCoversCommand extends ASheetCommand {
             final BookWyrmPGAuthorStore pgAuthorStore = new BookWyrmPGAuthorStore(bookWyrmConfig)
         ) {
             for (final BookModel sheetBook : sheetBookStore) {
+                if (!fingerprintStore.hasChanged(sheetBook)) {
+                    continue;
+                }
                 log.debug(sheetBook.toString());
                 final String title = sheetBook.getTitle();
                 final String authorName = sheetBook.getAuthorName();
@@ -154,12 +156,18 @@ public class BookWyrmCoversCommand extends ASheetCommand {
                 final BookModel jsonBook = jsonStore.findLikeOrMatch(sheetBook, bookLikeFilter(sheetBook));
                 final Pair<BookModel, Integer> pgPair = pgBookStore.findLikeForUser(sheetBook, bookWyrmConfig.getUserId());
                 BookModel pgBook = pgPair == null ? null : pgPair.getLeft();
+                final Integer bookId;
                 if (pgBook == null) {
                     log.info("Could not find: {}", sheetBook);
-                    addBook(bookSchema.mergeModels(jsonBook, sheetBook), pgAuthorStore, pgBookStore);
+                    bookId = addBook(bookSchema.mergeModels(jsonBook, sheetBook), pgAuthorStore, pgBookStore);
+                    continue;
+                } else {
+                    bookId = pgPair.getRight();
+                }
+                if (bookId == null) {
+                    log.error("!!!No bookId for {}", sheetBook);
                     continue;
                 }
-                final int bookId = pgPair.getRight();
                 final List<Integer> bookIds = pgBookStore.allIdsFor(bookId);
                 fixShelf(bookId, sheetBook, shelfForBook(sheetBook), pgBookStore);
                 // This will publish ratings!
@@ -170,6 +178,7 @@ public class BookWyrmCoversCommand extends ASheetCommand {
                 if (jsonBook != null) {
                     fixDescription(pgBook, jsonBook, bookIds, pgBookStore);
                 }
+                fingerprintStore.updateFingerprint(sheetBook);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

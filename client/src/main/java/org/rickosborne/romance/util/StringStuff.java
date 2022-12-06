@@ -25,6 +25,7 @@ public class StringStuff {
     public static final String[] FRACTIONS = new String[]{"", "¼", "½", "¾"};
     public static final Pattern ISO_DATE = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
     public static final Pattern NUMERIC = Pattern.compile("^[\\d,]+(?:\\.\\d*)?$");
+    public static final String QUOTE_CHAR_CLASS = "['’`\"]";
     public static final List<String> WHITESPACE = List.of(" ", "\t", "\r", "\n");
 
     public static String alphaOnly(final String s) {
@@ -33,7 +34,7 @@ public class StringStuff {
         }
         return s
             .toLowerCase()
-            .replace("'", "")
+            .replaceAll(QUOTE_CHAR_CLASS, "")
             .replaceAll("\\b(a|an|the)\\b", "")
             .replaceAll("[^a-z\\d]+", " ")
             .trim();
@@ -193,7 +194,7 @@ public class StringStuff {
         final int whole = num.intValue();
         final double frac = num - whole;
         final String fracPart = FRACTIONS[(int) (Math.round(frac * 4) / 4)];
-        return String.valueOf(whole) + fracPart + "⭐️/5";
+        return whole + fracPart + "⭐️/5";
     }
 
     public static String stringify(final Object o) {

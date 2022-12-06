@@ -4,6 +4,7 @@ import java.net.URL;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.rickosborne.romance.util.StringStuff.QUOTE_CHAR_CLASS;
 import static org.rickosborne.romance.util.StringStuff.alphaOnly;
 
 public class BookWyrm {
@@ -29,7 +30,7 @@ public class BookWyrm {
         if (text == null) {
             return null;
         }
-        final String alpha = alphaOnly(text.replaceAll("'", " "));
+        final String alpha = alphaOnly(text.replaceAll(QUOTE_CHAR_CLASS, " "));
         return "%" + alpha.replaceAll(" ", "%") + "%";
     }
 }
