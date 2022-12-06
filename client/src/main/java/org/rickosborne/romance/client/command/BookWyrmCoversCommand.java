@@ -160,7 +160,14 @@ public class BookWyrmCoversCommand extends ASheetCommand {
                 if (pgBook == null) {
                     log.info("Could not find: {}", sheetBook);
                     bookId = addBook(bookSchema.mergeModels(jsonBook, sheetBook), pgAuthorStore, pgBookStore);
+                } else {
+                    bookId = pgPair.getRight();
+                }
+                if (bookId == null) {
+                    log.error("!!!No bookId for {}", sheetBook);
                     continue;
+                } else if (pgBook == null) {
+                    pgBook = pgBookStore.findByDbIdAndUser(bookId, bookWyrmConfig.getUserId());
                 } else {
                     bookId = pgPair.getRight();
                 }
@@ -171,7 +178,7 @@ public class BookWyrmCoversCommand extends ASheetCommand {
                 final List<Integer> bookIds = pgBookStore.allIdsFor(bookId);
                 fixShelf(bookId, sheetBook, shelfForBook(sheetBook), pgBookStore);
                 // This will publish ratings!
-                // fixRating(bookId, sheetBook.getRatings().get(BookRating.Overall), pgBook, pgBookStore);
+                fixRating(bookId, sheetBook.getRatings().get(BookRating.Overall), pgBook);
                 fixImage(pgBook, sheetBook, bookId);
                 fixTabsUrl(pgBook, sheetBook, bookId);
                 fixGoodreadsId(pgBook, sheetBook, bookIds, pgBookStore);
@@ -245,8 +252,11 @@ public class BookWyrmCoversCommand extends ASheetCommand {
     private void fixRating(
         final int bookId,
         final Double rating,
-        @NonNull final BookModel book
+        final BookModel book
     ) throws IOException {
+        if (book == null) {
+            return;
+        }
         final Double existing = book.getRatings().get(BookRating.Overall);
         if (existing != null || rating == null) {
             return;
