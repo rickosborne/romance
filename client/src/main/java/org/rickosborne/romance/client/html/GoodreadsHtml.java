@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.util.BookStuff;
 import org.rickosborne.romance.util.StringStuff;
+import org.rickosborne.romance.util.UrlRank;
 
 import java.net.URL;
 import java.nio.file.Path;
@@ -52,8 +53,8 @@ public class GoodreadsHtml {
         title((b, t) -> b.setTitle(BookStuff.cleanTitle(t)), "meta[property=og:title]", "content"),
         titleLonger((b, t) -> b.setTitle(BookStuff.cleanTitle(t)), "#bookTitle", HtmlScraper::getText),
         goodreadsUrl((b, u) -> b.setGoodreadsUrl(StringStuff.urlFromString(u)), "link[rel=canonical]", "href"),
-        imageUrl((b, u) -> b.setImageUrl(StringStuff.urlFromString(u)), "meta[property=og:image]", "content"),
-        imageUrlTwitter((b, u) -> b.setImageUrl(StringStuff.urlFromString(u)), "meta[property=twitter:image]", "content"),
+        imageUrl((b, u) -> b.setImageUrl(StringStuff.urlFromString(UrlRank.fixup(u))), "meta[property=og:image]", "content"),
+        imageUrlTwitter((b, u) -> b.setImageUrl(StringStuff.urlFromString(UrlRank.fixup(u))), "meta[property=twitter:image]", "content"),
         //isbn(setIfEmpty(setButNot(BookModel::setIsbn, "null", ""), BookModel::getIsbn), "meta[property=books:isbn]", "content"),
         pages((b, p) -> b.setPages(Integer.parseInt(p, 10)), "meta[property=books:page_count]", "content"),
         pagesDetails((b, p) -> b.setPages(Integer.parseInt(p, 10)), "#details [itemprop=numberOfPages]", s -> s.getHtml().replace(" pages", "").replace(" page", "")),

@@ -6,6 +6,7 @@ import org.rickosborne.romance.client.response.BookInformation;
 import org.rickosborne.romance.client.response.GoodreadsAuthor;
 import org.rickosborne.romance.client.response.GoodreadsAutoComplete;
 import org.rickosborne.romance.db.model.BookModel;
+import org.rickosborne.romance.util.UrlRank;
 
 import java.net.URL;
 import java.time.Instant;
@@ -161,7 +162,7 @@ public class DocTabbed {
             .author(coalesce(author, other.author))
             .grUrl(coalesce(grUrl, other.grUrl))
             .hours(coalesce(hours, other.hours))
-            .imageUrl(coalesce(imageUrl, other.imageUrl))
+            .imageUrl(UrlRank.choose(imageUrl, other.imageUrl))
             .isbn(coalesce(isbn, other.isbn))
             .location(coalesce(location, other.location))
             .mc1Age(coalesce(mc1Age, other.mc1Age))

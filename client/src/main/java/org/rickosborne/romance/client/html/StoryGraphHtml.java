@@ -10,6 +10,7 @@ import org.rickosborne.romance.StoryGraph;
 import org.rickosborne.romance.client.JsonCookieStore;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.util.StringStuff;
+import org.rickosborne.romance.util.UrlRank;
 
 import java.net.CookieStore;
 import java.net.HttpCookie;
@@ -160,7 +161,7 @@ public class StoryGraphHtml {
                 if (texts.contains(authorName.toLowerCase()) && texts.contains(bookTitle.toLowerCase())) {
                     builder
                         .storygraphUrl(urlFromString(StoryGraph.API_BASE + bli.getAttr("href")))
-                        .imageUrl(urlFromString(bli.selectOne(".book-cover img").getAttr("src")));
+                        .imageUrl(UrlRank.fixup(urlFromString(bli.selectOne(".book-cover img").getAttr("src"))));
                 }
             });
         return builder.build();

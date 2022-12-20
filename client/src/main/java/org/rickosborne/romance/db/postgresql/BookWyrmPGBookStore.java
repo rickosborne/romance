@@ -14,6 +14,7 @@ import org.rickosborne.romance.util.Once;
 import org.rickosborne.romance.util.Pair;
 import org.rickosborne.romance.util.StringStuff;
 import org.rickosborne.romance.util.ThrowingBiConsumer;
+import org.rickosborne.romance.util.UrlRank;
 
 import java.net.URL;
 import java.sql.Connection;
@@ -265,7 +266,7 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
         book.setMastodonUrl(StringStuff.urlFromString(remoteId));
         final String cover = rs.getString("cover");
         if (cover != null && !cover.isBlank()) {
-            book.setImageUrl(StringStuff.urlFromString(remoteId.replaceAll("book/.+$", cover)));
+            book.setImageUrl(StringStuff.urlFromString(UrlRank.fixup(remoteId.replaceAll("book/.+$", cover))));
         }
         book.setPublisherDescription(rs.getString("description"));
         book.setSeriesName(rs.getString("series"));

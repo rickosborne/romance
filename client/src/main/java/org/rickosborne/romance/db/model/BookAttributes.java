@@ -2,6 +2,7 @@ package org.rickosborne.romance.db.model;
 
 import lombok.Getter;
 import lombok.NonNull;
+import org.rickosborne.romance.util.UrlRank;
 
 import java.net.URL;
 import java.time.LocalDate;
@@ -29,7 +30,7 @@ public enum BookAttributes implements EnumSchemaAttribute<BookModel> {
     feelOther(BookModel::getFeelOther, BookModel::setFeelOther, String.class),
     genre(BookModel::getGenre, BookModel::setGenre, String.class),
     goodreadsUrl(BookModel::getGoodreadsUrl, BookModel::setGoodreadsUrl, URL.class, SchemaAttribute::keepIfNotNull),
-    imageUrl(BookModel::getImageUrl, BookModel::setImageUrl, URL.class, (a, b) -> a.getPath().contains("tabs.web.media") ? a : b),
+    imageUrl(BookModel::getImageUrl, BookModel::setImageUrl, URL.class, UrlRank::choose),
     isbn(BookModel::getIsbn, setButNot(BookModel::setIsbn, "null", ""), String.class, SchemaAttribute::keepIfNotNull),
     hea(BookModel::getHea, BookModel::setHea, String.class),
     like(BookModel::getLike, BookModel::setLike, String.class),

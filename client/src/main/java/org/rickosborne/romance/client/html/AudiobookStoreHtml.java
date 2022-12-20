@@ -19,6 +19,7 @@ import org.rickosborne.romance.util.BookStuff;
 import org.rickosborne.romance.util.BrowserStuff;
 import org.rickosborne.romance.util.Hyperlink;
 import org.rickosborne.romance.util.StringStuff;
+import org.rickosborne.romance.util.UrlRank;
 
 import java.net.URL;
 import java.nio.file.Path;
@@ -56,10 +57,6 @@ public class AudiobookStoreHtml {
         "young adult fiction", "fiction", "science fiction", "fantasy");
     @SuppressWarnings("SpellCheckingInspection")
     public static final String SERIES_LINK_SELECTOR = ".detailpage a[href*='/audiobook-series/']";
-
-    public static String biggerImage(final String imgSrc) {
-        return imgSrc == null ? null : imgSrc.replace("-square-400.", "-square-1536.");
-    }
 
     protected static List<Hyperlink> collectLinks(final String selector, final HtmlScraper html) {
         final List<Hyperlink> names = new LinkedList<>();
@@ -127,7 +124,7 @@ public class AudiobookStoreHtml {
                     book.setAudiobookStoreUrl(StringStuff.urlFromString(link.getAttr("href").trim()));
                 });
                 slide.selectMany("img.pro-img.categoryImage", img -> {
-                    book.setImageUrl(StringStuff.urlFromString(biggerImage(img.getAttr("src").trim())));
+                    book.setImageUrl(StringStuff.urlFromString(UrlRank.fixup(img.getAttr("src").trim())));
                 });
                 slide.selectMany(".catimgcont a.trigger[data]", trigger -> {
                     final String data = trigger.getAttr("data").trim();
@@ -194,7 +191,7 @@ public class AudiobookStoreHtml {
             final BookModel.BookModelBuilder bookBuilder = BookModel.builder()
                 .datePublish(StringStuff.toLocalDateFromMDY(row.findElement(By.cssSelector(".library-preorder")).getText()))
                 .audiobookStoreUrl(urlFromString(row.findElement(By.cssSelector(".my-lib-img a:has(img)")).getAttribute("href")))
-                .imageUrl(urlFromString(row.findElement(By.cssSelector(".my-lib-img a img")).getAttribute("src")));
+                .imageUrl(urlFromString(UrlRank.fixup(row.findElement(By.cssSelector(".my-lib-img a img")).getAttribute("src"))));
             for (final WebElement detail : row.findElements(By.cssSelector(".my-lib-details .titledetail-specs > div"))) {
                 final String label = detail.findElement(By.cssSelector(".titledetail-label")).getText();
                 final String value = detail.findElement(By.cssSelector(".titledetail-value")).getText();
@@ -241,10 +238,9 @@ public class AudiobookStoreHtml {
                 final BookModel.BookModelBuilder bookBuilder = BookModel.builder();
                 final WebElement link = figure.findElement(By.cssSelector("span.title a"));
                 bookBuilder
-                    .imageUrl(urlFromString(figure
+                    .imageUrl(urlFromString(UrlRank.fixup(figure
                         .findElement(By.cssSelector("img.pro-img.categoryImage"))
-                        .getAttribute("src")
-                        .replace("-square-400.", "-square-1536.")))
+                        .getAttribute("src"))))
                     .audiobookStoreUrl(urlFromString(link.getAttribute("href")))
                     .title(link.getAttribute("title").trim())
                     .authorName(figure.findElement(By.cssSelector(".titledetail-author .authorName")).getText().trim())
@@ -363,10 +359,7 @@ public class AudiobookStoreHtml {
         Duration("/mainEntity/timeRequired", (b, t) -> b.setDurationHours(doubleFromDuration(t))),
         Publisher("/mainEntity/publisher/name", BookModel::setPublisherName),
         PublisherDescription("/mainEntity/description", setIfEmpty(BookModel::setPublisherDescription, BookModel::getPublisherDescription)),
-        Image("/mainEntity/image", (b, i) -> b.setImageUrl(urlFromString(i
-            .replace("-square-400", "-square-1536")
-            .replace("._UY630_SR1200,630_", "")
-        ))),
+        Image("/mainEntity/image", (b, i) -> b.setImageUrl(urlFromString(UrlRank.fixup(i)))),
         Gtin13("/mainEntity/gtin13", setButNot(BookModel::setIsbn, "null", "")),
         Isbn2("/mainEntity/isbn", setButNot(BookModel::setIsbn, "null", "")),
         Title("/mainEntity/name", setIfEmpty((b, t) -> b.setTitle(BookStuff.cleanTitle(t)), BookModel::getTitle)),

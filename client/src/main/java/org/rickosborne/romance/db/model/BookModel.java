@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import org.rickosborne.romance.db.Importable;
 import org.rickosborne.romance.util.BookRating;
 import org.rickosborne.romance.util.StringStuff;
+import org.rickosborne.romance.util.UrlRank;
 
 import java.net.URL;
 import java.time.Duration;
@@ -96,6 +97,10 @@ public class BookModel {
             return;
         }
         durationHours = Math.round(hours * 100d) / 100d;
+    }
+
+    public void setImageUrl(final URL url) {
+        imageUrl = UrlRank.choose(imageUrl, url);
     }
 
     public void setNarratorName(final String name) {
