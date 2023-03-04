@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
@@ -12,9 +13,12 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.rickosborne.romance.AudiobookStore;
 import org.rickosborne.romance.client.JsonCookieStore;
+import org.rickosborne.romance.client.audiobookstore.AbsPaginatedVisitor;
 import org.rickosborne.romance.db.DbJsonWriter;
 import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
+import org.rickosborne.romance.db.model.NarratorModel;
+import org.rickosborne.romance.db.model.SeriesModel;
 import org.rickosborne.romance.util.BookStuff;
 import org.rickosborne.romance.util.BrowserStuff;
 import org.rickosborne.romance.util.Hyperlink;
@@ -105,49 +109,17 @@ public class AudiobookStoreHtml {
     }
 
     public List<BookModel> getBooksForAuthor(final AuthorModel authorModel) {
-        final List<BookModel> books = new LinkedList<>();
         if (authorModel == null || authorModel.getAudiobookStoreUrl() == null) {
-            return books;
+            return List.of();
         }
-        final HtmlScraper scraper = HtmlScraper.scrape(HtmlScraper.Scrape.builder()
-            .url(authorModel.getAudiobookStoreUrl())
-            .cachePath(cachePath)
-            .delay(DELAY_MS)
-            .maxAge(MAX_AGE)
-            .build());
-        scraper.selectMany(".features-books-cat", bookList -> {
-            bookList.selectMany(".slide", slide -> {
-                final BookModel book = BookModel.build();
-                book.setAuthorName(authorModel.getName());
-                slide.selectMany(".title a", link -> {
-                    book.setTitle(link.getAttr("title").trim());
-                    book.setAudiobookStoreUrl(StringStuff.urlFromString(link.getAttr("href").trim()));
-                });
-                slide.selectMany("img.pro-img.categoryImage", img -> {
-                    book.setImageUrl(StringStuff.urlFromString(UrlRank.fixup(img.getAttr("src").trim())));
-                });
-                slide.selectMany(".catimgcont a.trigger[data]", trigger -> {
-                    final String data = trigger.getAttr("data").trim();
-                    book.setAudiobookStoreSku(trigger.getAttr("dataSKU"));
-                    if (data != null) {
-                        final String[] parts = data.split("\\|");
-                        if (parts.length >= 11) {
-                            if (book.getTitle() == null) {
-                                book.setTitle(parts[0].trim());
-                            }
-                            if (book.getNarratorName() == null) {
-                                book.setNarratorName(parts[3].trim());
-                            }
-                            if (book.getAudiobookStoreUrl() == null) {
-                                book.setAudiobookStoreUrl(StringStuff.urlFromString(parts[9].trim()));
-                            }
-                        }
-                    }
-                });
-                books.add(book);
-            });
-        });
-        return books;
+        final String authorName = authorModel.getName();
+        return getGuestPaginatedBooks(authorModel.getAudiobookStoreUrl()).stream()
+            .peek(b -> {
+                if (b.getAuthorName() == null) {
+                    b.setAuthorName(authorName);
+                }
+            })
+            .collect(Collectors.toList());
     }
 
     protected <M, E extends Enum<E> & LinkedData<M>, H extends Enum<H> & HtmlData<M>> M getFromBook(
@@ -178,6 +150,48 @@ public class AudiobookStoreHtml {
             }
         }
         return model;
+    }
+
+    public List<BookModel> getGuestPaginatedBooks(@NonNull final URL url) {
+        final List<BookModel> books = new LinkedList<>();
+        final HtmlScraper scraper = HtmlScraper.scrape(HtmlScraper.Scrape.builder()
+            .url(url)
+            .cachePath(cachePath)
+            .delay(DELAY_MS)
+            .maxAge(MAX_AGE)
+            .build());
+        scraper.selectMany(".features-books-cat", bookList -> {
+            bookList.selectMany(".slide", slide -> {
+                final BookModel book = BookModel.build();
+                slide.selectMany(".title a", link -> {
+                    book.setTitle(link.getAttr("title").trim());
+                    book.setAudiobookStoreUrl(StringStuff.urlFromString(link.getAttr("href").trim()));
+                });
+                slide.selectMany("img.pro-img.categoryImage", img -> {
+                    book.setImageUrl(StringStuff.urlFromString(UrlRank.fixup(img.getAttr("src").trim())));
+                });
+                slide.selectMany(".catimgcont a.trigger[data]", trigger -> {
+                    final String data = trigger.getAttr("data");
+                    book.setAudiobookStoreSku(trigger.getAttr("dataSKU"));
+                    if (data != null) {
+                        final String[] parts = data.trim().split("\\|");
+                        if (parts.length >= 11) {
+                            if (book.getTitle() == null) {
+                                book.setTitle(parts[0].trim());
+                            }
+                            if (book.getNarratorName() == null) {
+                                book.setNarratorName(parts[3].trim());
+                            }
+                            if (book.getAudiobookStoreUrl() == null) {
+                                book.setAudiobookStoreUrl(StringStuff.urlFromString(parts[9].trim()));
+                            }
+                        }
+                    }
+                });
+                books.add(book);
+            });
+        });
+        return books;
     }
 
     public List<BookModel> getPreorders(final WebDriver browser) {
@@ -243,7 +257,7 @@ public class AudiobookStoreHtml {
                         .getAttribute("src"))))
                     .audiobookStoreUrl(urlFromString(link.getAttribute("href")))
                     .title(link.getAttribute("title").trim())
-                    .authorName(figure.findElement(By.cssSelector(".titledetail-author .authorName")).getText().trim())
+                    .authorName(figure.findElement(By.cssSelector(".titledetail-author.authorName")).getText().trim())
                 ;
                 books.add(bookBuilder.build());
             }
@@ -296,6 +310,29 @@ public class AudiobookStoreHtml {
         }
     }
 
+    public void visitGuestPaginated(
+        @NonNull final URL url,
+        @NonNull final AbsPaginatedVisitor visitor
+    ) {
+        final List<BookModel> previews = getGuestPaginatedBooks(url);
+        previews.stream().map(preview -> {
+                if (visitor.onPreviewBook(preview)) {
+                    return preview;
+                }
+                return null;
+            })
+            .filter(Objects::nonNull)
+            .forEach(preview -> {
+                final BookModel bookDetails = getBookModelFromBook(preview.getAudiobookStoreUrl());
+            });
+        final HtmlScraper scraper = HtmlScraper.scrape(HtmlScraper.Scrape.builder()
+            .url(url)
+            .cachePath(cachePath)
+            .delay(DELAY_MS)
+            .maxAge(MAX_AGE)
+            .build());
+    }
+
     public <T> T withBrowser(final Function<WebDriver, T> block) {
         final WebDriver browser = BrowserStuff.getBrowser();
         try {
@@ -333,8 +370,8 @@ public class AudiobookStoreHtml {
     @Getter
     @RequiredArgsConstructor
     enum AuthorModelLD implements LinkedData<AuthorModel> {
-        //AuthorName("/mainEntity/author/name", AuthorModel::setName),
-        //TabsLink("/mainEntity/author/url", (a, v) -> a.setAudiobookStoreUrl(urlFromString(v))),
+        // AuthorName("/mainEntity/author/name", AuthorModel::setName),
+        // TabsLink("/mainEntity/author/url", (a, v) -> a.setAudiobookStoreUrl(urlFromString(v))),
         ;
         private final String ldPath;
         private final BiConsumer<AuthorModel, String> setter;
@@ -353,8 +390,8 @@ public class AudiobookStoreHtml {
     @Getter
     @RequiredArgsConstructor
     enum BookModelLD implements LinkedData<BookModel> {
-        //AuthorName("/mainEntity/author/name", BookModel::setAuthorName),
-        //NarratorName("/mainEntity/readBy/name", BookModel::setNarratorName),
+        // AuthorName("/mainEntity/author/name", BookModel::setAuthorName),
+        // NarratorName("/mainEntity/readBy/name", BookModel::setNarratorName),
         DatePublished("/mainEntity/datePublished", (b, d) -> b.setDatePublish(earlierSameYear(b.getDatePublish(), StringStuff.toLocalDate(d)))),
         Duration("/mainEntity/timeRequired", (b, t) -> b.setDurationHours(doubleFromDuration(t))),
         Publisher("/mainEntity/publisher/name", BookModel::setPublisherName),
@@ -390,5 +427,13 @@ public class AudiobookStoreHtml {
         String getLdPath();
 
         BiConsumer<M, String> getSetter();
+    }
+
+    @Value
+    public static class BookDetails {
+        List<AuthorModel> authors;
+        BookModel book;
+        List<NarratorModel> narrators;
+        SeriesModel series;
     }
 }

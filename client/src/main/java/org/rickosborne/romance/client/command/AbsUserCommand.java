@@ -3,6 +3,7 @@ package org.rickosborne.romance.client.command;
 import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.client.AudiobookStoreService;
 import org.rickosborne.romance.client.response.UserInformation2;
+import org.rickosborne.romance.db.DbJsonWriter;
 import picocli.CommandLine;
 
 import java.util.concurrent.Callable;
@@ -21,7 +22,7 @@ public class AbsUserCommand implements Callable<Integer> {
         final AudiobookStoreService storeService = AudiobookStoreService.build();
         auth.ensureAuthGuid(storeService);
         final UserInformation2 userInfo = storeService.userInformation2(auth.getAbsUserGuid().toString()).execute().body();
-        System.out.println(userInfo);
+        System.out.println(DbJsonWriter.getJsonWriter().writeValueAsString(userInfo));
         return 0;
     }
 }

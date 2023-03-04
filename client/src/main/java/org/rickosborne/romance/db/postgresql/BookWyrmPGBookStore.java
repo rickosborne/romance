@@ -1,10 +1,12 @@
 package org.rickosborne.romance.db.postgresql;
 
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.SneakyThrows;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.client.bookwyrm.BookWyrmConfig;
 import org.rickosborne.romance.client.bookwyrm.Shelf;
@@ -21,6 +23,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -172,6 +175,10 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
             if (rating != null) {
                 book.getRatings().put(BookRating.Overall, rating);
             }
+            final ReadDates readDates = findReadDatesForDbId(dbId, userId);
+            if (readDates != null && readDates.finishDate != null) {
+                book.setDateRead(readDates.finishDate);
+            }
         }
         return book;
     }
@@ -257,11 +264,31 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
         );
     }
 
+    public ReadDates findReadDatesForDbId(final int dbId, final int userId) {
+        return queryOne("" +
+            "SELECT start_date, finish_date " +
+            "FROM bookwyrm_readthrough " +
+            "WHERE (book_id = ?) AND (user_id = ?)", ps -> {
+            ps.setInt(1, dbId);
+            ps.setInt(2, userId);
+        }, rs -> ReadDates.builder()
+            .finishDate(asLocalDate(rs, "finish_date"))
+            .startDate(asLocalDate(rs, "start_date"))
+            .build());
+    }
+
+    public static LocalDate asLocalDate(final ResultSet rs, final String columnName) throws SQLException {
+        final OffsetDateTime offsetDateTime = rs.getObject(columnName, OffsetDateTime.class);
+        if (offsetDateTime != null) {
+            return offsetDateTime.toLocalDate();
+        }
+        return null;
+    }
+
     private Pair<BookModel, Integer> fromResultSet(final ResultSet rs) throws SQLException {
         final BookModel book = BookModel.build();
         book.setTitle(rs.getString("title"));
-        final OffsetDateTime publishedDate = rs.getObject("published_date", OffsetDateTime.class);
-        book.setDatePublish(publishedDate == null ? null : publishedDate.toLocalDate());
+        book.setDatePublish(asLocalDate(rs, "published_date"));
         final String remoteId = rs.getString("remote_id");
         book.setMastodonUrl(StringStuff.urlFromString(remoteId));
         final String cover = rs.getString("cover");
@@ -426,5 +453,12 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
             final String id = getId(bookModel);
             return id != null && shelved.contains(id);
         }
+    }
+
+    @Builder
+    @Value
+    static class ReadDates {
+        LocalDate finishDate;
+        LocalDate startDate;
     }
 }
