@@ -18,7 +18,7 @@
         <dependency>
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
-            <version>4.7.1</version>
+            <version>4.7.3</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -130,12 +130,12 @@
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
-            <version>1.15.4</version>
+            <version>1.15.3</version>
         </dependency>
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
             <artifactId>selenium-java</artifactId>
-            <version>4.8.1</version>
+            <version>4.9.0</version>
         </dependency>
         <dependency>
             <groupId>io.github.bonigarcia</groupId>
@@ -188,7 +188,7 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.4.6</version>
+            <version>1.4.7</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -255,7 +255,7 @@
                         <path>
                             <groupId>info.picocli</groupId>
                             <artifactId>picocli-codegen</artifactId>
-                            <version>4.6.3</version>
+                            <version>4.7.3</version>
                         </path>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -298,6 +298,15 @@
                                     <ignoreVersion>
                                         <type>regex</type>
                                         <version>200\d{5}\.\d{6}</version>
+                                    </ignoreVersion>
+                                </ignoreVersions>
+                            </rule>
+                            <rule>
+                                <groupId>org.jsoup</groupId>
+                                <artifactId>jsoup</artifactId>
+                                <ignoreVersions>
+                                    <ignoreVersion>
+                                        <version>1.15.4</version>
                                     </ignoreVersion>
                                 </ignoreVersions>
                             </rule>

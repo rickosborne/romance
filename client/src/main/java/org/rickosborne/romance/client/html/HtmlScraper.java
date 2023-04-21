@@ -166,8 +166,9 @@ public class HtmlScraper {
                     Thread.sleep(scrape.delay);
                 }
             }
-            Fetched.log.info(scrape.url.toString());
-            final Document liveDoc = Jsoup.connect(scrape.url.toString())
+            final String scrapeUrl = scrape.url.toString();
+            Fetched.log.info(scrapeUrl);
+            final Document liveDoc = Jsoup.connect(scrapeUrl)
                 .cookieStore(scrape.cookieStore)
                 .headers(Optional.ofNullable(scrape.headers).orElseGet(Collections::emptyMap))
                 .timeout(TIMEOUT_MS)

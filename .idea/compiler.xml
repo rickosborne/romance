@@ -14,8 +14,8 @@
         <outputRelativeToContentRoot value="true" />
         <option name="project" value="org.rickosborne.romance/audiobookstore-client" />
         <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/info/picocli/picocli-codegen/4.6.3/picocli-codegen-4.6.3.jar" />
-          <entry name="$MAVEN_REPOSITORY$/info/picocli/picocli/4.6.3/picocli-4.6.3.jar" />
+          <entry name="$MAVEN_REPOSITORY$/info/picocli/picocli-codegen/4.7.3/picocli-codegen-4.7.3.jar" />
+          <entry name="$MAVEN_REPOSITORY$/info/picocli/picocli/4.7.3/picocli-4.7.3.jar" />
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.24/lombok-1.18.24.jar" />
         </processorPath>
         <module name="audiobookstore-client" />

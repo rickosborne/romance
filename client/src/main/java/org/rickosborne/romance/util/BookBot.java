@@ -31,6 +31,7 @@ import org.rickosborne.romance.sheet.AdapterFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +40,7 @@ import java.util.stream.Collectors;
 
 import static org.rickosborne.romance.util.BookMerger.bookLikeFilter;
 import static org.rickosborne.romance.util.BookMerger.modelFromBookInformation;
+import static org.rickosborne.romance.util.MainCharRank.compareWithAuthor;
 import static org.rickosborne.romance.util.StringStuff.fuzzyListMatch;
 import static org.rickosborne.romance.util.StringStuff.fuzzyMatch;
 
@@ -251,8 +253,12 @@ public class BookBot {
         if (location != null && original.getLocation() == null) {
             original.setLocation(location);
         }
-        final List<BookModel.MainChar> summaryChars = summary.getMainChars();
-        if (summaryChars == null || summaryChars.isEmpty()) {
+        final List<BookModel.MainChar> summaryChars = Optional.ofNullable(summary.getMainChars())
+            .stream()
+            .flatMap(Collection::stream)
+            .sorted(compareWithAuthor(original.getAuthorName()))
+            .collect(Collectors.toList());
+        if (summaryChars.isEmpty()) {
             return original;
         }
         for (final BookModel.MainChar summaryChar : summaryChars) {
