@@ -1,7 +1,6 @@
 package org.rickosborne.romance.db;
 
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import org.rickosborne.romance.db.model.ModelSchema;
 import org.rickosborne.romance.db.model.ModelSchemas;
 import org.rickosborne.romance.db.model.SchemaAttribute;
@@ -12,9 +11,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
+import static org.rickosborne.romance.util.MathStuff.closeEnough;
+
 public class SchemaDiff {
+    private final Map<Class<?>, BiFunction<?, ?, Boolean>> equalityCheckers = Map.of(
+        Double.class, (Double a, Double b) -> closeEnough(a, b)
+    );
     private final Map<Class<?>, ModelSchema<?>> schemas = new HashMap<>();
 
     private <M, A> void diffAttribute(
@@ -43,7 +48,8 @@ public class SchemaDiff {
             builder
                 .beforeValue(beforeValue)
                 .afterValue(afterValue);
-            if (Objects.equals(beforeValue, afterValue)) {
+            @SuppressWarnings("unchecked") final BiFunction<A, A, Boolean> equalityChecker = (BiFunction<A, A, Boolean>) equalityCheckers.getOrDefault(attribute.getAttributeType(), Objects::equals);
+            if (equalityChecker.apply(beforeValue, afterValue)) {
                 builder.operation(Diff.Operation.Keep);
             } else {
                 builder.operation(Diff.Operation.Change);

@@ -2,14 +2,18 @@ package org.rickosborne.romance.db.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.Builder;
 import lombok.Data;
 import org.rickosborne.romance.util.BookRating;
+import org.rickosborne.romance.util.DoubleSerializer;
 import org.rickosborne.romance.util.YesNoUnknown;
 
 import java.net.URL;
 import java.util.Map;
 import java.util.TreeMap;
+
+import static org.rickosborne.romance.util.MathStuff.fourPlaces;
 
 @Data
 @Builder(toBuilder = true)
@@ -25,11 +29,16 @@ public class AuthorModel {
     private Integer fourStarPlusCount;
     private URL goodreadsUrl;
     private String mastodonHandle;
+    @JsonSerialize(using = DoubleSerializer.class)
     private Double maxRating;
+    @JsonSerialize(using = DoubleSerializer.class)
     private Double meanDurationHours;
+    @JsonSerialize(using = DoubleSerializer.class)
     private Double meanPages;
+    @JsonSerialize(using = DoubleSerializer.class)
     private Double minRating;
     private String name;
+    @JsonSerialize(using = DoubleSerializer.class)
     private Double odds4;
     private Integer ownedCount;
     private String pronouns;
@@ -43,6 +52,36 @@ public class AuthorModel {
     private URL storyGraphUrl;
     private String twitterName;
     private URL twitterUrl;
+
+    public void setMaxRating(final Double value) {
+        if (value != null) {
+            this.maxRating = fourPlaces(value);
+        }
+    }
+
+    public void setMeanDurationHours(final Double value) {
+        if (value != null) {
+            this.meanDurationHours = fourPlaces(value);
+        }
+    }
+
+    public void setMeanPages(final Double value) {
+        if (value != null) {
+            this.meanPages = fourPlaces(value);
+        }
+    }
+
+    public void setMinRating(final Double value) {
+        if (value != null) {
+            this.minRating = fourPlaces(value);
+        }
+    }
+
+    public void setOdds4(final Double value) {
+        if (value != null) {
+            this.odds4 = fourPlaces(value);
+        }
+    }
 
     @Override
     public String toString() {

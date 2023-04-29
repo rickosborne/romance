@@ -4,12 +4,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.rickosborne.romance.db.Importable;
 import org.rickosborne.romance.util.BookRating;
+import org.rickosborne.romance.util.DoubleSerializer;
 import org.rickosborne.romance.util.StringStuff;
 import org.rickosborne.romance.util.UrlRank;
 
@@ -20,6 +22,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
+import static org.rickosborne.romance.util.MathStuff.twoPlaces;
 
 @Data
 @Builder(toBuilder = true)
@@ -38,6 +42,7 @@ public class BookModel {
     private LocalDate datePurchase;
     private LocalDate dateRead;
     public Boolean dnf;
+    @JsonSerialize(using = DoubleSerializer.class)
     private Double durationHours;
     private String feelBad;
     private String feelGood;
@@ -92,11 +97,10 @@ public class BookModel {
         return StringStuff.starsFromNumber(ratings.get(BookRating.Overall));
     }
 
-    public void setDurationHours(final Double hours) {
-        if (hours == null) {
-            return;
+    public void setDurationHours(final Double value) {
+        if (value != null) {
+            this.durationHours = twoPlaces(value);
         }
-        durationHours = Math.round(hours * 100d) / 100d;
     }
 
     public void setImageUrl(final URL url) {
