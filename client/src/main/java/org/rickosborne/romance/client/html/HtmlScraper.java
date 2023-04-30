@@ -2,6 +2,7 @@ package org.rickosborne.romance.client.html;
 
 import lombok.AccessLevel;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
@@ -160,7 +161,7 @@ public class HtmlScraper {
             if (scrape.cachePath != null) {
                 final Document cachedDoc = fromCache(scrape.url, scrape.cachePath, scrape.maxAge);
                 if (cachedDoc != null) {
-                    return new HtmlScraper(scrape.cachePath, scrape.cookieStore, cachedDoc);
+                    return new HtmlScraper(scrape.cachePath, scrape.cookieStore, cachedDoc, scrape.url);
                 }
                 if (scrape.delay != null) {
                     Thread.sleep(scrape.delay);
@@ -179,7 +180,7 @@ public class HtmlScraper {
                     fw.write(liveDoc.outerHtml());
                 }
             }
-            return new HtmlScraper(scrape.cachePath, scrape.cookieStore, liveDoc);
+            return new HtmlScraper(scrape.cachePath, scrape.cookieStore, liveDoc, scrape.url);
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -188,9 +189,11 @@ public class HtmlScraper {
     private final Path cachePath;
     private final JsonCookieStore cookieStore;
     private final Element element;
+    @Getter
+    private final URL url;
 
     private HtmlScraper empty() {
-        return new HtmlScraper(cachePath, null, null);
+        return new HtmlScraper(cachePath, null, null, null);
     }
 
     public String getAttr(@NonNull final String attrName) {
@@ -242,7 +245,7 @@ public class HtmlScraper {
             if (parent != null) {
                 final Element descendents = parent.selectFirst(selector);
                 if (descendents != null) {
-                    return new HtmlScraper(cachePath, cookieStore, parent);
+                    return new HtmlScraper(cachePath, cookieStore, parent, url);
                 }
             }
             el = parent;
@@ -258,7 +261,7 @@ public class HtmlScraper {
         if (elements.isEmpty()) {
             return empty();
         } else {
-            return new HtmlScraper(cachePath, cookieStore, elements.first());
+            return new HtmlScraper(cachePath, cookieStore, elements.first(), url);
         }
     }
 
@@ -267,7 +270,7 @@ public class HtmlScraper {
             return;
         }
         for (final Element el : element.select(selector)) {
-            eachBlock.accept(new HtmlScraper(cachePath, cookieStore, el));
+            eachBlock.accept(new HtmlScraper(cachePath, cookieStore, el, url));
         }
     }
 
@@ -279,7 +282,7 @@ public class HtmlScraper {
         if (elements.isEmpty()) {
             return empty();
         } else if (elements.size() == 1) {
-            return new HtmlScraper(cachePath, cookieStore, elements.first());
+            return new HtmlScraper(cachePath, cookieStore, elements.first(), url);
         } else {
             throw new IllegalArgumentException("More than one element matches selector: " + selector);
         }
@@ -292,15 +295,15 @@ public class HtmlScraper {
         final Element nextElement = element.select(selector).stream()
             .filter(el -> {
                 final String text = el.ownText();
-                //noinspection ConstantConditions
+                // noinspection ConstantConditions
                 return text != null && !text.isBlank() && needle.test(text);
             })
             .findFirst()
             .orElse(null);
-        return new HtmlScraper(cachePath, cookieStore, nextElement);
+        return new HtmlScraper(cachePath, cookieStore, nextElement, url);
     }
 
-    public static interface RequestExtras {
+    public interface RequestExtras {
         default Map<String, String> getCookies() {
             return Collections.emptyMap();
         }

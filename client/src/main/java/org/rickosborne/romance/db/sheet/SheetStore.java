@@ -50,6 +50,8 @@ public class SheetStore<M> implements ModelStore<M>, Iterable<M> {
     @Getter(lazy = true)
     private final SheetStuff.SheetDescriptor sheetDescriptor = SheetStuff.getSheetDescriptor(getDbModel(), getSpreadsheet(), getSpreadsheets());
     @Getter(lazy = true)
+    private final int firstEmptyRowNum = getRecords().size() + getSheetDescriptor().getFrozenRowCount();
+    @Getter(lazy = true)
     private final String[] columnKeys = getSheetDescriptor().getColumnKeys();
 
     @Override

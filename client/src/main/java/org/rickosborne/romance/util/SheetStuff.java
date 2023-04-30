@@ -36,7 +36,7 @@ public class SheetStuff {
                 }
                 final String cellValue = stringify(row.get(colNum));
                 if (cellValue == null || cellValue.isBlank()) {
-                    //noinspection UnnecessaryContinue
+                    // noinspection UnnecessaryContinue
                     continue;
                 } else {
                     lastInRow[rowNum] = cellValue;

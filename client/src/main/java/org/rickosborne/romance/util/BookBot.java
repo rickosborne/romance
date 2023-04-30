@@ -17,6 +17,7 @@ import org.rickosborne.romance.client.GoodreadsService;
 import org.rickosborne.romance.client.JsonCookieStore;
 import org.rickosborne.romance.client.command.AudiobookStoreAuthOptions;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
+import org.rickosborne.romance.client.html.BellaHtml;
 import org.rickosborne.romance.client.html.GoodreadsHtml;
 import org.rickosborne.romance.client.html.StoryGraphHtml;
 import org.rickosborne.romance.client.response.BookInformation;
@@ -64,6 +65,8 @@ public class BookBot {
         a.ensureAuthGuid(getAudiobookStoreCache().getService());
         return a.getAbsUserGuid();
     });
+    @Getter(lazy = true)
+    private final BellaHtml bellaHtml = new BellaHtml();
     private final BookSchema bookSchema = new BookSchema();
     private final Path cachePath;
     @Getter(lazy = true)
@@ -246,28 +249,32 @@ public class BookBot {
         if (storedMc1.getName() != null || storedMc2.getName() != null) {
             return original;
         }
-        log.info("Summarizing: " + original.getTitle() + " by " + original.getAuthorName());
-        log.info("Blurb: " + description);
-        final LanguageParser.Summary summary = getLanguageParser().summarize(description);
-        final String location = summary.getLocation();
-        if (location != null && original.getLocation() == null) {
-            original.setLocation(location);
-        }
-        final List<BookModel.MainChar> summaryChars = Optional.ofNullable(summary.getMainChars())
-            .stream()
-            .flatMap(Collection::stream)
-            .sorted(compareWithAuthor(original.getAuthorName()))
-            .collect(Collectors.toList());
-        if (summaryChars.isEmpty()) {
-            return original;
-        }
-        for (final BookModel.MainChar summaryChar : summaryChars) {
-            final BookModel.MainChar storedMC = targetMC(summaryChar, storedMc1, storedMc2);
-            if (storedMC != null) {
-                storedMC.importFromIfNotNull(summaryChar);
-            } else {
-                log.warn("Dropped MC: " + summaryChar);
+        try {
+            log.info("Summarizing: " + original.getTitle() + " by " + original.getAuthorName());
+            log.info("Blurb: " + description);
+            final LanguageParser.Summary summary = getLanguageParser().summarize(description);
+            final String location = summary.getLocation();
+            if (location != null && original.getLocation() == null) {
+                original.setLocation(location);
             }
+            final List<BookModel.MainChar> summaryChars = Optional.ofNullable(summary.getMainChars())
+                .stream()
+                .flatMap(Collection::stream)
+                .sorted(compareWithAuthor(original.getAuthorName()))
+                .collect(Collectors.toList());
+            if (summaryChars.isEmpty()) {
+                return original;
+            }
+            for (final BookModel.MainChar summaryChar : summaryChars) {
+                final BookModel.MainChar storedMC = targetMC(summaryChar, storedMc1, storedMc2);
+                if (storedMC != null) {
+                    storedMC.importFromIfNotNull(summaryChar);
+                } else {
+                    log.warn("Dropped MC: " + summaryChar);
+                }
+            }
+        } catch (Throwable e) {
+            log.error("Text inference failed", e);
         }
         return original;
     }

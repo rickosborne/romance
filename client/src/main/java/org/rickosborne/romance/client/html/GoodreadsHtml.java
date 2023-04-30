@@ -1,5 +1,6 @@
 package org.rickosborne.romance.client.html;
 
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +11,6 @@ import org.rickosborne.romance.util.UrlRank;
 
 import java.net.URL;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -22,21 +22,6 @@ import static org.rickosborne.romance.util.ModelSetter.setIfEmpty;
 @RequiredArgsConstructor
 public class GoodreadsHtml {
     public static final int DELAY_MS = 5000;
-    private static final List<String> MONTHS = List.of(
-        "",
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December"
-    );
     public static final Pattern SERIES_NAME_AND_PART = Pattern.compile("\\((?<name>.+?)\\s+#(?<part>.+)\\)");
     private final Path cachePath;
 
@@ -49,13 +34,14 @@ public class GoodreadsHtml {
         return book;
     }
 
-    public enum BookPage {
+    @Getter
+    public enum BookPage implements IBookPage {
         title((b, t) -> b.setTitle(BookStuff.cleanTitle(t)), "meta[property=og:title]", "content"),
         titleLonger((b, t) -> b.setTitle(BookStuff.cleanTitle(t)), "#bookTitle", HtmlScraper::getText),
         goodreadsUrl((b, u) -> b.setGoodreadsUrl(StringStuff.urlFromString(u)), "link[rel=canonical]", "href"),
         imageUrl((b, u) -> b.setImageUrl(StringStuff.urlFromString(UrlRank.fixup(u))), "meta[property=og:image]", "content"),
         imageUrlTwitter((b, u) -> b.setImageUrl(StringStuff.urlFromString(UrlRank.fixup(u))), "meta[property=twitter:image]", "content"),
-        //isbn(setIfEmpty(setButNot(BookModel::setIsbn, "null", ""), BookModel::getIsbn), "meta[property=books:isbn]", "content"),
+        // isbn(setIfEmpty(setButNot(BookModel::setIsbn, "null", ""), BookModel::getIsbn), "meta[property=books:isbn]", "content"),
         pages((b, p) -> b.setPages(Integer.parseInt(p, 10)), "meta[property=books:page_count]", "content"),
         pagesDetails((b, p) -> b.setPages(Integer.parseInt(p, 10)), "#details [itemprop=numberOfPages]", s -> s.getHtml().replace(" pages", "").replace(" page", "")),
         publisherDescription(setIfEmpty(BookModel::setPublisherDescription, BookModel::getPublisherDescription), "#description span[style]", HtmlScraper::getText),
@@ -95,7 +81,7 @@ public class GoodreadsHtml {
             }
             final Matcher matcher = Pattern.compile("Published\\s+(?<mo>\\S+)\\s+(?<day>\\d+)\\S*\\s+(?<year>\\d+)\\s+by").matcher(line);
             if (matcher.find()) {
-                final int mo = MONTHS.indexOf(matcher.group("mo"));
+                final int mo = English.MONTHS.indexOf(matcher.group("mo"));
                 final int day = Integer.parseInt(matcher.group("day"), 10);
                 final int year = Integer.parseInt(matcher.group("year"), 10);
                 return String.format("%04d-%02d-%02d", year, mo, day);
@@ -122,21 +108,6 @@ public class GoodreadsHtml {
             @NonNull final String attributeName
         ) {
             this(setter, selector, s -> s.getAttr(attributeName));
-        }
-
-        public void findAndSet(@NonNull final BookModel book, @NonNull final HtmlScraper scraper) {
-            final HtmlScraper localScraper = scraper.selectFirst(selector);
-            if (localScraper.isEmpty()) {
-                return;
-            }
-            try {
-                final String text = stringifier.apply(localScraper);
-                if (text != null && !text.isBlank()) {
-                    setter.accept(book, text);
-                }
-            } catch (final NullPointerException e) {
-                log.warn("NPE while parsing GR BookPage: " + this.name());
-            }
         }
     }
 }
