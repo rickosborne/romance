@@ -20,13 +20,13 @@ public class UrlRank {
     }
 
     public static String choose(final String a, final String b) {
-        if (a == null) {
-            return b;
-        } else if (b == null) {
-            return a;
-        }
         final String fa = fixup(a);
         final String fb = fixup(b);
+        if (fa == null) {
+            return fb;
+        } else if (fb == null) {
+            return fa;
+        }
         final int ra = rank(fa);
         final int rb = rank(fb);
         return rb > ra ? fb : fa;
@@ -70,7 +70,7 @@ public class UrlRank {
     }
 
     public static String fixup(final String url) {
-        if (url == null) {
+        if (url == null || url.contains("/facebook/")) {
             return null;
         }
         return url
@@ -78,6 +78,7 @@ public class UrlRank {
             .replace("images-na.ssl-images-amazon.com", "i.gr-assets.com")
             .replace("^(.+?i\\.gr-assets\\.com.+?\\.)_.+?_\\.", "$1")
             .replace("-square-\\d+.", "-square-1536.")
+            .replace("._UY630_SR1200,630_.", ".")
             ;
     }
 
@@ -98,8 +99,7 @@ public class UrlRank {
     public enum UrlRanking {
         MediaAudiobookStore(Pattern.compile("//media[.]audiobookstore[.]com/", Pattern.CASE_INSENSITIVE)),
         CdnStoryGraph(Pattern.compile("//cdn[.]storygraph[.]com/", Pattern.CASE_INSENSITIVE)),
-        GrAssets(Pattern.compile("//i[.]gr-assets[.]com/", Pattern.CASE_INSENSITIVE))
-        ;
+        GrAssets(Pattern.compile("//i[.]gr-assets[.]com/", Pattern.CASE_INSENSITIVE));
         @NonNull
         private final Pattern pattern;
 

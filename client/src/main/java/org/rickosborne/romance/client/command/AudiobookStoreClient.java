@@ -30,6 +30,7 @@ import java.util.logging.LogManager;
         BookWyrmCoversCommand.class,
         BookWyrmImportCsvFromSheetCommand.class,
         BookWyrmPGSyncCommand.class,
+        BackfillCommand.class,
     }
 )
 public class AudiobookStoreClient implements Callable<Integer> {
