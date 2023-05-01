@@ -17,6 +17,7 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class StringStuff {
     public static final Pattern BOOLEAN = Pattern.compile("^(?:true|false)$", Pattern.CASE_INSENSITIVE);
@@ -250,6 +251,18 @@ public class StringStuff {
             return new URL(url);
         } catch (MalformedURLException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public static String normalizeNames(final String name) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        final String[] names = name.split("\\s*(?:\\s+and|&|;)\\s+");
+        if (names.length == 1) {
+            return name;
+        } else {
+            return Stream.of(names).sorted().collect(Collectors.joining(", "));
         }
     }
 }

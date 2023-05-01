@@ -24,6 +24,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import static org.rickosborne.romance.util.MathStuff.twoPlaces;
+import static org.rickosborne.romance.util.StringStuff.normalizeNames;
 
 @Data
 @Builder(toBuilder = true)
@@ -97,6 +98,16 @@ public class BookModel {
         return StringStuff.starsFromNumber(ratings.get(BookRating.Overall));
     }
 
+    public void setAuthorName(final String name) {
+        if (name == null) {
+            return;
+        }
+        if (authorName != null && authorName.length() > name.length()) {
+            return;
+        }
+        authorName = normalizeNames(name);
+    }
+
     public void setDurationHours(final Double value) {
         if (value != null) {
             this.durationHours = twoPlaces(value);
@@ -114,7 +125,7 @@ public class BookModel {
         if (narratorName != null && narratorName.length() > name.length()) {
             return;
         }
-        narratorName = name;
+        narratorName = normalizeNames(name);
     }
 
     public void setSeriesName(final String updated) {
