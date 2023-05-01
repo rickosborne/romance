@@ -168,12 +168,6 @@ public class BookWyrmCoversCommand extends ASheetCommand {
                     continue;
                 } else if (pgBook == null) {
                     pgBook = pgBookStore.findByDbIdAndUser(bookId, bookWyrmConfig.getUserId());
-                } else {
-                    bookId = pgPair.getRight();
-                }
-                if (bookId == null) {
-                    log.error("!!!No bookId for {}", sheetBook);
-                    continue;
                 }
                 final List<Integer> bookIds = pgBookStore.allIdsFor(bookId);
                 fixShelf(bookId, sheetBook, shelfForBook(sheetBook), pgBookStore);
