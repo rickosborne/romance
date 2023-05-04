@@ -32,6 +32,7 @@ import java.util.logging.LogManager;
         BookWyrmPGSyncCommand.class,
         BackfillCommand.class,
         BellaAudiobooksCommand.class,
+        ABDCSearchCommand.class,
     }
 )
 public class AudiobookStoreClient implements Callable<Integer> {

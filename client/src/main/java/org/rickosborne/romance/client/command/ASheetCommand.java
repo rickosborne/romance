@@ -19,6 +19,7 @@ import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.client.JsonCookieStore;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
+import org.rickosborne.romance.client.html.AudiobooksDotComHtml;
 import org.rickosborne.romance.client.html.StoryGraphHtml;
 import org.rickosborne.romance.db.DbModel;
 import org.rickosborne.romance.db.json.JsonStore;
@@ -52,6 +53,8 @@ public abstract class ASheetCommand implements Callable<Integer> {
     private static final LocalDate excelEpoch = LocalDate.of(1899, Month.DECEMBER, 30);
     @Getter(lazy = true, value = AccessLevel.PROTECTED)
     private final AdapterFactory adapterFactory = new AdapterFactory();
+    @Getter(lazy = true)
+    private final AudiobooksDotComHtml audiobooksDotComHtml = new AudiobooksDotComHtml();
     @Getter(value = AccessLevel.PROTECTED)
     @CommandLine.Option(names = {"--cache", "-c"}, description = "Path to cache dir", defaultValue = ".cache/html")
     private Path cachePath;

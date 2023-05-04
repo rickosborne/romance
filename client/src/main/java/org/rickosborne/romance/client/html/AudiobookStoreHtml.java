@@ -1,6 +1,5 @@
 package org.rickosborne.romance.client.html;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +13,6 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import org.rickosborne.romance.AudiobookStore;
 import org.rickosborne.romance.client.JsonCookieStore;
 import org.rickosborne.romance.client.audiobookstore.AbsPaginatedVisitor;
-import org.rickosborne.romance.db.DbJsonWriter;
 import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.model.NarratorModel;
@@ -50,7 +48,7 @@ import static org.rickosborne.romance.util.StringStuff.setButNot;
 import static org.rickosborne.romance.util.StringStuff.urlFromString;
 
 @RequiredArgsConstructor
-public class AudiobookStoreHtml {
+public class AudiobookStoreHtml implements ILinkedData {
     @SuppressWarnings("SpellCheckingInspection")
     public static final String AUTHOR_LINK_SELECTOR = ".detailpage a[href*='/authors/']";
     public static final String AUTHOR_NAME_DELIMITER = ", ";
@@ -84,6 +82,8 @@ public class AudiobookStoreHtml {
         return Optional.empty();
     }
 
+    @Getter
+    private final String cacheIdentifier = "abs";
     private final Path cachePath;
     private final JsonCookieStore cookieStore;
 
@@ -120,36 +120,6 @@ public class AudiobookStoreHtml {
                 }
             })
             .collect(Collectors.toList());
-    }
-
-    protected <M, E extends Enum<E> & LinkedData<M>, H extends Enum<H> & HtmlData<M>> M getFromBook(
-        @NonNull final M model,
-        @NonNull final URL bookUrl,
-        final E[] ldValues,
-        final H[] htmlValues
-    ) {
-        final HtmlScraper scraper = HtmlScraper.scrape(HtmlScraper.Scrape.builder()
-            .url(bookUrl)
-            .cachePath(cachePath)
-            .delay(DELAY_MS)
-            .maxAge(MAX_AGE)
-            .build());
-        final String ld = scraper.selectOne("script[type=application/ld+json]").getHtml();
-        final JsonNode ldNode = DbJsonWriter.readTree(ld);
-        if (ldValues != null) {
-            for (final E ldItem : ldValues) {
-                final JsonNode value = ldNode.at(ldItem.getLdPath());
-                if (value != null && value.isTextual()) {
-                    ldItem.getSetter().accept(model, value.asText());
-                }
-            }
-        }
-        if (htmlValues != null) {
-            for (final H htmlItem : htmlValues) {
-                htmlItem.getSetter().accept(model, scraper);
-            }
-        }
-        return model;
     }
 
     public List<BookModel> getGuestPaginatedBooks(@NonNull final URL url) {
@@ -417,16 +387,6 @@ public class AudiobookStoreHtml {
 
         private final String ldPath;
         private final BiConsumer<BookModel, String> setter;
-    }
-
-    interface HtmlData<M> {
-        BiConsumer<M, HtmlScraper> getSetter();
-    }
-
-    interface LinkedData<M> {
-        String getLdPath();
-
-        BiConsumer<M, String> getSetter();
     }
 
     @Value

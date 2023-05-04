@@ -76,9 +76,12 @@ public class UrlRank {
         return url
             .replace("//s3-us-west-2.amazonaws.com/tabs.web.media/", "//media.audiobookstore.com/")
             .replace("images-na.ssl-images-amazon.com", "i.gr-assets.com")
-            .replace("^(.+?i\\.gr-assets\\.com.+?\\.)_.+?_\\.", "$1")
-            .replace("-square-\\d+.", "-square-1536.")
+            .replaceAll("^(.+?i\\.gr-assets\\.com.+?\\.)_.+?_\\.", "$1")
+            .replaceAll("-square-\\d+.", "-square-1536.")
             .replace("._UY630_SR1200,630_.", ".")
+            .replaceAll("\\?.*$", "")
+            .replaceAll("#.*$", "")
+            .replace("covers.audiobooks.com/images/covers/large/", "covers.audiobooks.com/images/covers/full/")
             ;
     }
 
@@ -99,7 +102,9 @@ public class UrlRank {
     public enum UrlRanking {
         MediaAudiobookStore(Pattern.compile("//media[.]audiobookstore[.]com/", Pattern.CASE_INSENSITIVE)),
         CdnStoryGraph(Pattern.compile("//cdn[.]storygraph[.]com/", Pattern.CASE_INSENSITIVE)),
-        GrAssets(Pattern.compile("//i[.]gr-assets[.]com/", Pattern.CASE_INSENSITIVE));
+        GrAssets(Pattern.compile("//i[.]gr-assets[.]com/", Pattern.CASE_INSENSITIVE)),
+        CoversAudiobooksCom(Pattern.compile("//covers[.]audiobooks[.]com/", Pattern.CASE_INSENSITIVE)),
+        ;
         @NonNull
         private final Pattern pattern;
 
