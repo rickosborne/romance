@@ -1,5 +1,6 @@
 package org.rickosborne.romance.client.html;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -9,10 +10,13 @@ import org.rickosborne.romance.util.StringStuff;
 import org.rickosborne.romance.util.UrlRank;
 
 import java.net.URL;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.rickosborne.romance.db.model.SchemaAttribute.earlierSameYear;
 import static org.rickosborne.romance.util.MathStuff.doubleFromDuration;
@@ -56,16 +60,30 @@ public class AudiobooksDotComHtml implements ILinkedData {
     @Getter
     @RequiredArgsConstructor
     enum BookModelLD implements LinkedData<BookModel> {
-        authorName("/author/name", BookModel::setAuthorName),
-        datePublished("/datePublished", (b, s) -> b.setDatePublish(earlierSameYear(b.getDatePublish(), StringStuff.toLocalDate(s)))),
-        image("/image", (b, s) -> b.setImageUrl(urlFromString(UrlRank.fixup(s)))),
-        title("/name", setIfEmpty((b, s) -> b.setTitle(BookStuff.cleanTitle(s)), BookModel::getTitle)),
-        url("/url", (b, s) -> b.setAudiobooksDotComUrl(urlFromString(UrlRank.fixup(s)))),
-        duration("/workExample/duration", (b, t) -> b.setDurationHours(doubleFromDuration(t))),
-        isbn("/workExample/isbn", BookModel::setIsbn),
-        narrator("/workExample/readBy/name", BookModel::setNarratorName),
+        authorName("/author/name", null, BookModel::setAuthorName),
+        datePublished("/datePublished", null, (b, s) -> b.setDatePublish(earlierSameYear(b.getDatePublish(), StringStuff.toLocalDate(s)))),
+        image("/image", null, (b, s) -> b.setImageUrl(urlFromString(UrlRank.fixup(s)))),
+        title("/name", null, setIfEmpty((b, s) -> b.setTitle(BookStuff.cleanTitle(s)), BookModel::getTitle)),
+        url("/url", null, (b, s) -> b.setAudiobooksDotComUrl(urlFromString(UrlRank.fixup(s)))),
+        duration("/workExample/duration", null, (b, t) -> b.setDurationHours(doubleFromDuration(t))),
+        isbn("/workExample/isbn", null, BookModel::setIsbn),
+        narrator("/workExample/readBy", (b, readBy) -> {
+            final List<String> names = new LinkedList<>();
+            readBy.forEach(rb -> {
+                final String name = rb.at("/name").asText();
+                if (name != null && !name.isBlank()) {
+                    names.add(name);
+                }
+            });
+            final String allNames = names.stream().sorted().collect(Collectors.joining(", "));
+            if (!allNames.isBlank()) {
+                b.setNarratorName(allNames);
+            }
+        }, BookModel::setNarratorName),
+        narrators("/workExample/readBy/name", null, BookModel::setNarratorName),
         ;
         private final String ldPath;
+        private final BiConsumer<BookModel, JsonNode> nodeHandler;
         private final BiConsumer<BookModel, String> setter;
     }
 

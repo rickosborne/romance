@@ -7,6 +7,7 @@ import org.rickosborne.romance.db.DbJsonWriter;
 import java.net.URL;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.function.BiConsumer;
 
 import static org.rickosborne.romance.AudiobookStore.DELAY_MS;
 
@@ -40,8 +41,16 @@ public interface ILinkedData {
         if (ldValues != null) {
             for (final E ldItem : ldValues) {
                 final JsonNode value = ldNode.at(ldItem.getLdPath());
-                if (value != null && value.isTextual()) {
+                if (value == null) {
+                    continue;
+                }
+                if (value.isTextual()) {
                     ldItem.getSetter().accept(model, value.asText());
+                } else {
+                    final BiConsumer<M, JsonNode> nodeHandler = ldItem.getNodeHandler();
+                    if (nodeHandler != null) {
+                        nodeHandler.accept(model, value);
+                    }
                 }
             }
         }
