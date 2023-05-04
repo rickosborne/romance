@@ -16,6 +16,7 @@ import static org.rickosborne.romance.util.StringStuff.setButNot;
 
 @Getter
 public enum BookAttributes implements EnumSchemaAttribute<BookModel> {
+    audiobooksDotComUrl(BookModel::getAudiobooksDotComUrl, BookModel::setAudiobooksDotComUrl, URL.class, SchemaAttribute::keepIfNotNull),
     audiobookStoreSku(BookModel::getAudiobookStoreSku, BookModel::setAudiobookStoreSku, String.class, SchemaAttribute::keepIfNotNull),
     audiobookStoreUrl(BookModel::getAudiobookStoreUrl, BookModel::setAudiobookStoreUrl, URL.class, SchemaAttribute::keepIfNotNull),
     authorName(BookModel::getAuthorName, BookModel::setAuthorName, String.class, SchemaAttribute::keepIfNotNull),

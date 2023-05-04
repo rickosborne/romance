@@ -17,14 +17,6 @@ public interface ModelStore<M> {
 
     M findByIdFromCache(final String id);
 
-    default M findLikeOrMatch(final M model, final Predicate<M> match) {
-        final String id = idFromModel(model);
-        if (id != null) {
-            return findById(id);
-        }
-        return stream().filter(match).findAny().orElse(null);
-    }
-
     default M findLike(final M model) {
         if (model == null) {
             return null;
@@ -45,6 +37,17 @@ public interface ModelStore<M> {
             throw new NullPointerException("Model has no id: " + model.getClass().getSimpleName() + ": " + model);
         }
         return findByIdFromCache(id);
+    }
+
+    default M findLikeOrMatch(final M model, final Predicate<M> match) {
+        final String id = idFromModel(model);
+        if (id != null) {
+            final M found = findById(id);
+            if (found != null) {
+                return found;
+            }
+        }
+        return stream().filter(match).findAny().orElse(null);
     }
 
     DbModel getDbModel();

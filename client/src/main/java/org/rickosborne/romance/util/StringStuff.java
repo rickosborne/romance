@@ -121,7 +121,11 @@ public class StringStuff {
         if (a.equals(b)) {
             return true;
         }
-        return Objects.equals(alphaOnly(a), alphaOnly(b));
+        final String aa = alphaOnly(a);
+        final String bb = alphaOnly(b);
+        return Objects.equals(aa, bb)
+            || ((a.contains(":") || a.contains(",")) && aa.startsWith(bb))
+            || ((b.contains(":") || b.contains(",")) && bb.startsWith(aa));
     }
 
     public static boolean isBoolean(final String s) {
@@ -149,6 +153,18 @@ public class StringStuff {
 
     public static boolean nonBlank(final String t) {
         return t != null && !t.isBlank();
+    }
+
+    public static String normalizeNames(final String name) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        final String[] names = name.split("\\s*(?:\\s+and|&|;)\\s+");
+        if (names.length == 1) {
+            return name;
+        } else {
+            return Stream.of(names).sorted().collect(Collectors.joining(", "));
+        }
     }
 
     public static String nullIfBlank(final String s) {
@@ -251,18 +267,6 @@ public class StringStuff {
             return new URL(url);
         } catch (MalformedURLException e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    public static String normalizeNames(final String name) {
-        if (name == null || name.isBlank()) {
-            return null;
-        }
-        final String[] names = name.split("\\s*(?:\\s+and|&|;)\\s+");
-        if (names.length == 1) {
-            return name;
-        } else {
-            return Stream.of(names).sorted().collect(Collectors.joining(", "));
         }
     }
 }
