@@ -29,6 +29,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -174,7 +175,8 @@ public class BookWyrmCoversCommand extends ASheetCommand {
                 // This will publish ratings!
                 fixRating(bookId, sheetBook.getRatings().get(BookRating.Overall), pgBook);
                 fixImage(pgBook, sheetBook, bookId);
-                fixTabsUrl(pgBook, sheetBook, bookId);
+                fixPurchaseUrl(pgBook, sheetBook, bookId, BookModel::getAudiobookStoreUrl);
+                fixPurchaseUrl(pgBook, sheetBook, bookId, BookModel::getAudiobooksDotComUrl);
                 fixGoodreadsId(pgBook, sheetBook, bookIds, pgBookStore);
                 if (jsonBook != null) {
                     fixDescription(pgBook, jsonBook, bookIds, pgBookStore);
@@ -243,6 +245,34 @@ public class BookWyrmCoversCommand extends ASheetCommand {
         }
     }
 
+    protected void fixPurchaseUrl(
+        final BookModel pgBook,
+        final BookModel sheetBook,
+        final int bookId,
+        final Function<BookModel, URL> urlAccessor
+    ) throws IOException {
+        final URL sheetUrl = urlAccessor.apply(sheetBook);
+        final URL pgUrl = urlAccessor.apply(pgBook);
+        if (pgUrl != null || sheetUrl == null) {
+            return;
+        }
+        final Response<Void> response = bookWyrmService.addFileLink(
+            bookId,
+            String.valueOf(bookId),
+            sheetUrl,
+            "audio",
+            "purchase",
+            String.valueOf(bookWyrmConfig.getUserId())
+        ).execute();
+        if (response.isSuccessful()) {
+            log.info("Added link: {}", sheetBook);
+        } else if (response.code() == 404) {
+            log.info("Link 404: {}", sheetBook);
+        } else {
+            tryToLogResponseFail(response);
+        }
+    }
+
     private void fixRating(
         final int bookId,
         final Double rating,
@@ -278,32 +308,6 @@ public class BookWyrmCoversCommand extends ASheetCommand {
             log.error("Tried to shelve, got a funky response: {} {}", response.code(), response.message());
         } else {
             log.debug("Shelved: {} / {}", shelf.getName(), book);
-        }
-    }
-
-    protected void fixTabsUrl(
-        final BookModel pgBook,
-        final BookModel sheetBook,
-        final int bookId
-    ) throws IOException {
-        final URL audiobookStoreUrl = sheetBook.getAudiobookStoreUrl();
-        if (pgBook.getAudiobookStoreUrl() != null || audiobookStoreUrl == null) {
-            return;
-        }
-        final Response<Void> response = bookWyrmService.addFileLink(
-            bookId,
-            String.valueOf(bookId),
-            audiobookStoreUrl,
-            "audio",
-            "purchase",
-            String.valueOf(bookWyrmConfig.getUserId())
-        ).execute();
-        if (response.isSuccessful()) {
-            log.info("Added TABS link: {}", sheetBook);
-        } else if (response.code() == 404) {
-            log.info("Link 404: {}", sheetBook);
-        } else {
-            tryToLogResponseFail(response);
         }
     }
 
