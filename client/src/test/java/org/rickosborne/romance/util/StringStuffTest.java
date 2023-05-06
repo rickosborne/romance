@@ -20,4 +20,11 @@ class StringStuffTest {
     void normalizeNames_single() {
         assertEquals("Lori Prince", normalizeNames("Lori Prince"));
     }
+
+    @Test
+    void titleCase() {
+        assertEquals("Apple Pie", StringStuff.titleCase("apple pie"));
+        assertEquals("Apple Pie", StringStuff.titleCase("APPLE PIE"));
+        assertEquals("Car of the Year", StringStuff.titleCase("Car of the Year"));
+    }
 }

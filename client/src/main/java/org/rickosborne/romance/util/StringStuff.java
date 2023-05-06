@@ -9,6 +9,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -222,6 +223,25 @@ public class StringStuff {
         } else {
             throw new IllegalArgumentException("Cannot stringify " + o.getClass().getSimpleName() + ": " + o);
         }
+    }
+
+    public static String titleCase(final String s) {
+        if (s == null || s.isBlank()) {
+            return s;
+        }
+        final String t = s.trim();
+        final boolean needsFix = (t.toLowerCase().equals(t) || t.toUpperCase().equals(t));
+        if (!needsFix) {
+            return t;
+        }
+        return Arrays.stream(t.split("\\s+"))
+            .map(word -> {
+                if (word.length() < 2) {
+                    return word.toUpperCase();
+                }
+                return word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase();
+            })
+            .collect(Collectors.joining(" "));
     }
 
     public static LocalDate toLocalDate(final String s) {
