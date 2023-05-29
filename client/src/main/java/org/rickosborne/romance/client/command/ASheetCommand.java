@@ -18,6 +18,7 @@ import lombok.Value;
 import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.client.JsonCookieStore;
+import org.rickosborne.romance.client.google.Google;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.client.html.AudiobooksDotComHtml;
 import org.rickosborne.romance.client.html.StoryGraphHtml;
@@ -96,7 +97,7 @@ public abstract class ASheetCommand implements Callable<Integer> {
     @CommandLine.Mixin
     private AudiobookStoreAuthOptions tabsAuth;
     @Getter(value = AccessLevel.PROTECTED)
-    @CommandLine.Option(names = {"--userid", "-u"}, description = "Google User ID/email", required = true)
+    @CommandLine.Option(names = {"--userid", "-u"}, description = "Google User ID/email")
     private String userId;
     @Getter(lazy = true)
     private final SheetStoreFactory sheetStoreFactory = buildSheetStoreFactory();
@@ -202,6 +203,13 @@ public abstract class ASheetCommand implements Callable<Integer> {
     }
 
     abstract protected Integer doWithSheets();
+
+    public String getUserId() {
+        if (userId == null) {
+            userId = Google.getUser().getUserid();
+        }
+        return userId;
+    }
 
     protected void writeChangesIfRequested() {
         if (isWrite() && !changeRequests.isEmpty()) {

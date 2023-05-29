@@ -18,14 +18,14 @@ import java.util.UUID;
 @Slf4j
 @Getter
 public class AudiobookStoreAuthOptions {
-    @CommandLine.Option(names = "password", description = "ABS Password", defaultValue = "${env:AUDIOBOOKSTORE_PASSWORD:-}")
+    @CommandLine.Option(names = "password", description = "ABS Password", defaultValue = "${env:AUDIOBOOKSTORE_PASSWORD:NULL_VALUE}")
     private String absPassword;
     @Setter
-    @CommandLine.Option(names = "userGuid", description = "ABS User Guid", defaultValue = "${env:AUDIOBOOKSTORE_USERGUID:-}")
+    @CommandLine.Option(names = "userGuid", description = "ABS User Guid", defaultValue = "${env:AUDIOBOOKSTORE_USERGUID:NULL_VALUE}")
     private UUID absUserGuid;
-    @CommandLine.Option(names = "username", description = "ABS Username", defaultValue = "${env:AUDIOBOOKSTORE_USERNAME:-}")
+    @CommandLine.Option(names = "username", description = "ABS Username", defaultValue = "${env:AUDIOBOOKSTORE_USERNAME:NULL_VALUE}")
     private String absUsername;
-    @CommandLine.Option(names = "abs-credentials-file", description = "ABS credentials file", defaultValue = "${env:AUDIOBOOKSTORE_CREDENTIALS_FILE:.credentials/audiobookstore.json}")
+    @CommandLine.Option(names = "abs-credentials-file", description = "ABS credentials file", defaultValue = "${env:AUDIOBOOKSTORE_CREDENTIALS_FILE:NULL_VALUE}")
     private Path credentialsFile;
 
     @Getter(lazy = true, value = AccessLevel.PROTECTED)
@@ -79,12 +79,20 @@ public class AudiobookStoreAuthOptions {
         return absUsername;
     }
 
+    public Path getCredentialsFile() {
+        if (credentialsFile == null) {
+            credentialsFile = Path.of(".credentials").resolve("audiobookstore.json");
+        }
+        return credentialsFile;
+    }
+
     private AbsCredentials loadFromFile() {
-        if (credentialsFile != null) {
+        final Path cf = getCredentialsFile();
+        if (cf != null) {
             try {
-                return DbJsonWriter.readFile(credentialsFile.toFile(), AbsCredentials.class);
+                return DbJsonWriter.readFile(cf.toFile(), AbsCredentials.class);
             } catch (IllegalArgumentException e) {
-                log.warn("Could not read: " + credentialsFile, e);
+                log.warn("Could not read: " + cf, e);
             }
         }
         return null;

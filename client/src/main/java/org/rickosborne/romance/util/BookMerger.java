@@ -106,6 +106,7 @@ public class BookMerger {
             .title(info.getCleanTitle())
             .audiobookStoreUrl(info.getUrl())
             .audiobookStoreSku(info.getSku())
+            .audiobookStoreRatings(info.getRatings())
             .build();
     }
 

@@ -35,6 +35,7 @@ public class BookModel {
         return BookModel.builder().build();
     }
 
+    private Integer audiobookStoreRatings;
     private String audiobookStoreSku;
     private URL audiobookStoreUrl;
     private URL audiobooksDotComUrl;

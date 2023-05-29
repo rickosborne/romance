@@ -33,6 +33,7 @@ import java.util.logging.LogManager;
         BackfillCommand.class,
         BellaAudiobooksCommand.class,
         ABDCSearchCommand.class,
+        AbsRatingsCommand.class,
     }
 )
 public class AudiobookStoreClient implements Callable<Integer> {

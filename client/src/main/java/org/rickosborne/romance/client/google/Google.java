@@ -11,6 +11,7 @@ import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.sheets.v4.SheetsScopes;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.rickosborne.romance.db.DbJsonWriter;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -30,6 +31,7 @@ public class Google {
     public static final List<String> SCOPES = List.of(SheetsScopes.SPREADSHEETS);
     public static final Path TOKENS_FILE_DEFAULT = Path.of(".credentials");
     public static final Path STORED_CREDENTIAL_PATH = TOKENS_FILE_DEFAULT.resolve("StoredCredential");
+    public static final Path USER_CREDENTIAL_PATH = TOKENS_FILE_DEFAULT.resolve("google-user.json");
 
     public static Credential getCredentials(@NonNull final String userId) {
         return getCredentials(userId, CREDENTIALS_PATH_DEFAULT);
@@ -74,6 +76,10 @@ public class Google {
             log.error(String.format("Could not open HTTP transport: %s", e.getMessage()));
             throw new RuntimeException(e);
         }
+    }
+
+    public static GoogleUser getUser() {
+        return DbJsonWriter.readFile(USER_CREDENTIAL_PATH.toFile(), GoogleUser.class);
     }
 
     public static Credential regenerateCredentials(@NonNull final String userId) {

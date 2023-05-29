@@ -28,6 +28,7 @@ import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.model.BookSchema;
 import org.rickosborne.romance.db.sheet.SheetStoreFactory;
 import org.rickosborne.romance.sheet.AdapterFactory;
+import picocli.CommandLine;
 
 import java.io.IOException;
 import java.net.URL;
@@ -55,6 +56,7 @@ public class BookBot {
     private final CacheClient<AudiobookStoreService> audiobookStoreCache = AudiobookStoreService.buildCaching();
     @Getter(lazy = true)
     private final AudiobookStoreSuggestService audiobookStoreSuggestService = AudiobookStoreSuggestService.build();
+    @CommandLine.Mixin
     private final AudiobookStoreAuthOptions auth;
     @Getter(lazy = true)
     private final UUID audiobookStoreUserGuid = Once.supply(() -> {
