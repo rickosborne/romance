@@ -2,3 +2,4 @@
 .credentials/
 *.iml
 book-data/
+ignored-purchases.csv

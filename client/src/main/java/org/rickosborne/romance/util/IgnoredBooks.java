@@ -2,12 +2,14 @@ package org.rickosborne.romance.util;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
-import org.rickosborne.romance.client.command.LastCommand;
 import org.rickosborne.romance.db.model.BookModel;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -19,8 +21,12 @@ public class IgnoredBooks {
 
     @SneakyThrows
     private static List<Predicate<BookModel>> buildIgnoredBooks() {
+        final File csvFile = Path.of(IGNORED_PURCHASES_CSV).toFile();
+        if (!csvFile.isFile()) {
+            return List.of();
+        }
         try (
-            final InputStream i = LastCommand.class.getClassLoader().getResourceAsStream(IGNORED_PURCHASES_CSV);
+            final InputStream i = new FileInputStream(csvFile);
             final BufferedReader r = new BufferedReader(new InputStreamReader(i))
         ) {
             String line;
