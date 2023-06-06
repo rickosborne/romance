@@ -17,6 +17,7 @@ public enum TagAttributes implements EnumSchemaAttribute<TagModel> {
     ratedCount(TagModel::getRatedCount, TagModel::setRatedCount, Integer.class),
     ratedDurationHours(TagModel::getRatedDurationHours, TagModel::setRatedDurationHours, Double.class),
     ratings(TagModel::getRatings, null, Map.class),
+    fiveStarCount(TagModel::getFiveStarCount, TagModel::setFiveStarCount, Integer.class),
     ;
     private final Function<TagModel, ?> accessor;
     private final Class<Object> attributeType;

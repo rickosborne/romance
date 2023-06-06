@@ -54,6 +54,7 @@ public class TagSheetAdapter implements ModelSheetAdapter<TagModel> {
         countHours(TMS.doubleSetter(TagModel::setRatedDurationHours)),
         rateAvgOverall(TMS.doubleSetter(TMS.ifNotNull((m, r) -> m.getRatings().put(BookRating.Overall, r)))),
         rateStars(ModelSetter::setNothing),
+        rate5(TMS.intSetter(TagModel::setFiveStarCount)),
         calcPositiveRate(TMS.doubleSetter(TagModel::setPositiveRate)),
         calcSumDurationPlusMinus(ModelSetter::setNothing),
         calcPositiveDuration(TMS.doubleSetter(TagModel::setPositiveDurationHours)),

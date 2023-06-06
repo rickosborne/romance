@@ -22,6 +22,7 @@ public class TagModel {
     private String description;
     @JsonSerialize(using = DoubleSerializer.class)
     private Double effectiveLike;
+    private Integer fiveStarCount;
     private String name;
     private Integer ownedCount;
     @JsonSerialize(using = DoubleSerializer.class)
