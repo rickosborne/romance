@@ -6,12 +6,12 @@ import org.rickosborne.romance.client.response.GoodreadsAuthor;
 import org.rickosborne.romance.client.response.GoodreadsAutoComplete;
 import org.rickosborne.romance.db.model.BookModel;
 
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+
+import static org.rickosborne.romance.util.DateStuff.localFromInstant;
 
 public class BookMerger {
     public static Predicate<BookModel> bookLikeFilter(final BookModel like) {
@@ -98,10 +98,10 @@ public class BookMerger {
         }
         return BookModel.builder()
             .authorName(info.getAuthors())
-            .dateRead(Optional.ofNullable(info.getCompletionInstant()).map(i -> LocalDate.ofInstant(i, ZoneOffset.UTC)).orElse(null))
+            .dateRead(localFromInstant(info.getCompletionInstant()))
             .imageUrl(UrlRank.fixup(info.getImageUrl()))
             .narratorName(info.getNarrators())
-            .datePurchase(Optional.ofNullable(info.getPurchaseInstant()).map(i -> LocalDate.ofInstant(i, ZoneOffset.UTC)).orElse(null))
+            .datePurchase(localFromInstant(info.getPurchaseInstant()))
             .durationHours(info.getRuntimeHours())
             .title(info.getCleanTitle())
             .audiobookStoreUrl(info.getUrl())

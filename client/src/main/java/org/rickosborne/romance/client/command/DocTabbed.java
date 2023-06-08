@@ -11,11 +11,12 @@ import org.rickosborne.romance.util.UrlRank;
 import java.net.URL;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+
+import static org.rickosborne.romance.util.DateStuff.instantFromLocal;
 
 @Builder(toBuilder = true)
 public class DocTabbed {
@@ -72,8 +73,8 @@ public class DocTabbed {
             .publisher(book.getPublisherName())
             .narrator(book.getNarratorName())
             .hours(book.getDurationHours())
-            .published(Optional.ofNullable(book.getDatePublish()).map(d -> d.atStartOfDay().toInstant(ZoneOffset.UTC)).orElse(null))
-            .purchased(Optional.ofNullable(book.getDatePurchase()).map(d -> d.atStartOfDay().toInstant(ZoneOffset.UTC)).orElse(null))
+            .published(instantFromLocal(book.getDatePublish()))
+            .purchased(instantFromLocal(book.getDatePurchase()))
             .read(Boolean.TRUE.equals(book.getDnf()) ? "DNF" : Optional.ofNullable(book.getDateRead()).map(d -> d.format(DateTimeFormatter.ISO_LOCAL_DATE)).orElse(null))
             .grUrl(book.getGoodreadsUrl())
             .absUrl(book.getAudiobookStoreUrl())

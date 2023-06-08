@@ -6,9 +6,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+
+import static org.rickosborne.romance.util.DateStuff.localFromInstant;
 
 public interface ModelSetter<M> {
     static <T, U> BiConsumer<T, U> setIfEmpty(
@@ -88,7 +89,7 @@ public interface ModelSetter<M> {
             if (v instanceof LocalDate) {
                 setter.accept(m, (LocalDate) v);
             } else if (v instanceof Instant) {
-                setter.accept(m, LocalDate.ofInstant((Instant) v, ZoneOffset.UTC));
+                setter.accept(m, localFromInstant((Instant) v));
             } else if (v instanceof String) {
                 final String s = (String) v;
                 if (s.isBlank()) {

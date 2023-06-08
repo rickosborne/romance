@@ -2,7 +2,9 @@ package org.rickosborne.romance.util;
 
 import org.rickosborne.romance.client.html.English;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,5 +24,19 @@ public class DateStuff {
             return LocalDate.of(year, mo, day);
         }
         return null;
+    }
+
+    public static Instant instantFromLocal(final LocalDate localDate) {
+        if (localDate == null) {
+            return null;
+        }
+        return localDate.atStartOfDay().toInstant(ZoneOffset.UTC);
+    }
+
+    public static LocalDate localFromInstant(final Instant instant) {
+        if (instant == null) {
+            return null;
+        }
+        return LocalDate.ofInstant(instant, ZoneOffset.UTC);
     }
 }
