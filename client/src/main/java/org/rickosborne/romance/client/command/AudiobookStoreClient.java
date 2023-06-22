@@ -34,6 +34,7 @@ import java.util.logging.LogManager;
         BellaAudiobooksCommand.class,
         ABDCSearchCommand.class,
         AbsRatingsCommand.class,
+        ReadCommand.class,
     }
 )
 public class AudiobookStoreClient implements Callable<Integer> {
