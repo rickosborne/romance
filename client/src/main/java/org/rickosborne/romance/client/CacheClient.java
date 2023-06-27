@@ -101,7 +101,8 @@ public class CacheClient<S> {
                 log.warn("Unable to fetch: " + key);
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            log.error("Fetch failed: " + key, e);
+            // throw new RuntimeException(e);
         }
         return null;
     }
