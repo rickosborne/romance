@@ -8,7 +8,7 @@
 
     <properties>
         <jackson.version>2.15.2</jackson.version>
-        <junit-jupiter.version>5.9.3</junit-jupiter.version>
+        <junit-jupiter.version>5.10.0</junit-jupiter.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -18,7 +18,7 @@
         <dependency>
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
-            <version>4.7.4</version>
+            <version>4.7.5</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -105,7 +105,7 @@
             <!-- until com.google.api-client is updated -->
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
-            <version>1.15</version>
+            <version>1.16.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.oauth-client</groupId>
@@ -115,7 +115,7 @@
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-sheets</artifactId>
-            <version>v4-rev20230526-2.0.0</version>
+            <version>v4-rev20230808-2.0.0</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
@@ -135,12 +135,12 @@
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
             <artifactId>selenium-java</artifactId>
-            <version>4.9.1</version>
+            <version>4.11.0</version>
         </dependency>
         <dependency>
             <groupId>io.github.bonigarcia</groupId>
             <artifactId>webdrivermanager</artifactId>
-            <version>5.3.3</version>
+            <version>5.5.2</version>
             <exclusions>
                 <exclusion>
                     <groupId>commons-io</groupId>
@@ -155,7 +155,7 @@
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.12.0</version>
+            <version>2.13.0</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
@@ -189,7 +189,7 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.4.7</version>
+            <version>1.4.11</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -256,7 +256,7 @@
                         <path>
                             <groupId>info.picocli</groupId>
                             <artifactId>picocli-codegen</artifactId>
-                            <version>4.7.4</version>
+                            <version>4.7.5</version>
                         </path>
                         <path>
                             <groupId>org.projectlombok</groupId>
