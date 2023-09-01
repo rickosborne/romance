@@ -11,6 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.rickosborne.romance.db.Importable;
 import org.rickosborne.romance.util.BookRating;
+import org.rickosborne.romance.util.BookStuff;
 import org.rickosborne.romance.util.DoubleSerializer;
 import org.rickosborne.romance.util.StringStuff;
 import org.rickosborne.romance.util.UrlRank;
@@ -18,11 +19,15 @@ import org.rickosborne.romance.util.UrlRank;
 import java.net.URL;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import static org.rickosborne.romance.util.BookStuff.cleanAuthor;
+import static org.rickosborne.romance.util.BookStuff.cleanTitle;
 import static org.rickosborne.romance.util.MathStuff.twoPlaces;
 import static org.rickosborne.romance.util.StringStuff.normalizeNames;
 
@@ -33,6 +38,26 @@ import static org.rickosborne.romance.util.StringStuff.normalizeNames;
 public class BookModel {
     public static BookModel build() {
         return BookModel.builder().build();
+    }
+
+    public static String fileNameForBook(final BookModel book) {
+        final StringBuilder sb = new StringBuilder();
+        sb.append(book.getAuthorName());
+        final LocalDate publish = book.getDatePublish();
+        if (publish == null) {
+            sb.append(" () ");
+        } else {
+            sb.append(" (")
+                .append(publish.format(DateTimeFormatter.ISO_LOCAL_DATE))
+                .append(") ");
+        }
+        sb.append(BookStuff.cleanTitle(book.getTitle()));
+        return sb.toString();
+    }
+
+    public static String hashKeyForBook(final BookModel book) {
+        return Optional.ofNullable(cleanAuthor(book.getAuthorName())).map(String::toLowerCase).orElse("") + "\t" +
+            Optional.ofNullable(cleanTitle(book.getTitle())).map(String::toLowerCase).orElse("");
     }
 
     private Integer audiobookStoreRatings;
@@ -98,6 +123,11 @@ public class BookModel {
     @SuppressWarnings("unused")  // Jackson
     public String getStars() {
         return StringStuff.starsFromNumber(ratings.get(BookRating.Overall));
+    }
+
+    @Override
+    public int hashCode() {
+        return hashKeyForBook(this).hashCode();
     }
 
     public void setAuthorName(final String name) {

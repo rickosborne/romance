@@ -38,6 +38,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static org.rickosborne.romance.util.BookMerger.bookLikeFilter;
@@ -296,6 +297,12 @@ public class BookBot {
     }
 
     public List<BookModel> fetchAudiobooks() {
+        return fetchAudiobooksWithInfoFilter((_info) -> true);
+    }
+
+    public List<BookModel> fetchAudiobooksWithInfoFilter(
+        Predicate<BookInformation> predicate
+    ) {
         final AudiobookStoreService storeService = getAudiobookStoreCache().getService();
         final AudiobookStoreAuthOptions storeAuth = getAuth();
         storeAuth.ensureAuthGuid(storeService);
@@ -309,7 +316,10 @@ public class BookBot {
             log.warn("Could not fetch TABS user info");
             return Collections.emptyList();
         }
-        return info.getAudiobooks().stream().map(BookMerger::modelFromBookInformation).collect(Collectors.toList());
+        return info.getAudiobooks().stream()
+            .filter(predicate)
+            .map(BookMerger::modelFromBookInformation)
+            .collect(Collectors.toList());
     }
 
     public boolean isRomance(final BookModel book) {

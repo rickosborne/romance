@@ -35,6 +35,7 @@ import java.util.logging.LogManager;
         ABDCSearchCommand.class,
         AbsRatingsCommand.class,
         ReadCommand.class,
+        DownloadAbsAudioCommand.class,
     }
 )
 public class AudiobookStoreClient implements Callable<Integer> {

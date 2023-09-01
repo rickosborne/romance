@@ -6,6 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BookModelTest {
     @Test
+    void hashCodeAccountsForSpellingInconsistency() {
+        assertEquals(
+            BookModel.builder().authorName("A B Example").title("some title").build().hashCode(),
+            BookModel.builder().authorName("a b Example").title("Some   Title").build().hashCode()
+        );
+    }
+
+    @Test
     void setNarratorName() {
         final BookModel book = BookModel.build();
         book.setNarratorName("Bailey Carr & Abby Craden");
