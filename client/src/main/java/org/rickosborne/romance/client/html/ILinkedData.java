@@ -12,7 +12,7 @@ import java.util.function.BiConsumer;
 import static org.rickosborne.romance.AudiobookStore.DELAY_MS;
 
 public interface ILinkedData {
-    Duration MAX_AGE = Duration.ofDays(90);
+    Duration MAX_AGE = Duration.ofDays(900);
 
     default String getCacheIdentifier() {
         return getClass().getSimpleName()

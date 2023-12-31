@@ -96,7 +96,6 @@ public abstract class ASheetCommand implements Callable<Integer> {
     @Getter(value = AccessLevel.PROTECTED)
     @CommandLine.Mixin
     private AudiobookStoreAuthOptions tabsAuth;
-    @Getter(value = AccessLevel.PROTECTED)
     @CommandLine.Option(names = {"--userid", "-u"}, description = "Google User ID/email")
     private String userId;
     @Getter(lazy = true)

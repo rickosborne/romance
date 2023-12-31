@@ -3,15 +3,13 @@ package org.rickosborne.romance.db.model;
 import lombok.Getter;
 import org.rickosborne.romance.util.StringStuff;
 
-import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Getter
 public class BookSchema implements ModelSchema<BookModel> {
-    @Getter
     private final List<BookAttributes> attributes = List.of(BookAttributes.values());
 
     @Override
