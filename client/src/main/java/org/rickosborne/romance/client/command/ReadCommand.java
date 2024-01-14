@@ -17,6 +17,9 @@ import java.util.Objects;
     description = "Fetch and display recently finished reads"
 )
 public class ReadCommand extends ASheetCommand {
+    @CommandLine.Option(names = {"--limit"})
+    protected int limit = 20;
+
     @Override
     protected Integer doWithSheets() {
         final BookBot bot = getBookBot();
@@ -30,7 +33,7 @@ public class ReadCommand extends ASheetCommand {
                 .map(BookMerger::modelFromBookInformation)
                 .filter(b -> b.getDateRead() != null)
                 .sorted((a, b) -> b.getDateRead().compareTo(a.getDateRead()))
-                .limit(10)
+                .limit(this.limit)
                 .forEachOrdered(b -> System.out.printf("%s\t%s%n", b.getDateRead(), b));
         } catch (IOException e) {
             throw new RuntimeException(e);
