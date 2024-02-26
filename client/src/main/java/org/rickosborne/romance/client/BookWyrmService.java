@@ -5,7 +5,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
-import org.apache.commons.codec.CharEncoding;
 import org.rickosborne.romance.client.bookwyrm.BookWyrmConfig;
 import org.rickosborne.romance.client.response.BookWyrmBook;
 import org.rickosborne.romance.db.DbJsonWriter;
@@ -156,7 +155,7 @@ public interface BookWyrmService {
     @Multipart
     Call<Void> updateCoverFromUrl(
         @Path("bookId") final int bookId,
-        @Part(value = "cover-url", encoding = CharEncoding.US_ASCII) final RequestBody coverUrl
+        @Part(value = "cover-url", encoding = "US-ASCII") final RequestBody coverUrl
     );
 
     default public Call<Void> updateCoverFromUrl(
