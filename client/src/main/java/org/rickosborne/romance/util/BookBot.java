@@ -243,10 +243,13 @@ public class BookBot {
     public BookModel extendWithTextInference(
         @NonNull final BookModel original
     ) {
-        final String description = original.getPublisherDescription();
+        String description = original.getPublisherDescription();
         if (description == null || description.isBlank()) {
             return original;
         }
+        description = StringStuff.unescape(description)
+            .replaceAll(StringStuff.asPattern(original.getAuthorName()).toString(), "the author")
+            .replaceAll(StringStuff.asPattern(original.getNarratorName()).toString(), "the narrator");
         final BookModel.MainChar storedMc1 = original.getMc1();
         final BookModel.MainChar storedMc2 = original.getMc2();
         if (storedMc1.getName() != null || storedMc2.getName() != null) {

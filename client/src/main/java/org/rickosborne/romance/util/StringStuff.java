@@ -20,6 +20,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.apache.commons.text.StringEscapeUtils.unescapeHtml4;
+
+
 public class StringStuff {
     public static final Pattern BOOLEAN = Pattern.compile("^(?:true|false)$", Pattern.CASE_INSENSITIVE);
     public static final String CRLF = "\n";
@@ -40,6 +43,12 @@ public class StringStuff {
             .replaceAll("\\b(a|an|the)\\b", "")
             .replaceAll("[^a-z\\d]+", " ")
             .trim();
+    }
+
+    public static Pattern asPattern(final String text) {
+        return Pattern.compile(Stream.of(text.split("\\s+"))
+            .map((String word) -> Pattern.quote(word.toLowerCase()))
+            .collect(Collectors.joining("\\s+", "(?i)", "")), Pattern.CASE_INSENSITIVE);
     }
 
     public static String cacheName(@NonNull final URL url) {
@@ -266,6 +275,10 @@ public class StringStuff {
         } else {
             return text.substring(0, 1).toUpperCase() + text.substring(1);
         }
+    }
+
+    public static String unescape(final String text) {
+        return unescapeHtml4(text);
     }
 
     public static URI uriFromString(final String uri) {
