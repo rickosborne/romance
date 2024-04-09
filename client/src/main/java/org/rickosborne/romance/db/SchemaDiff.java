@@ -22,7 +22,7 @@ public class SchemaDiff {
     );
     private final Map<Class<?>, ModelSchema<?>> schemas = new HashMap<>();
 
-    private <M, A> void diffAttribute(
+    protected <M, A> void diffAttribute(
         final M beforeModel,
         final M afterModel,
         final SchemaAttribute<M, A> attribute,
@@ -69,8 +69,17 @@ public class SchemaDiff {
         }
         @SuppressWarnings("unchecked") final Class<M> type = (Class<M>) one.getClass();
         final ModelSchema<M> modelSchema = getSchemasForModel(type);
+        final List<SchemaAttribute<M, Object>> allAttributes = modelSchema.getAttributes();
+        return this.diffModels(before, after, allAttributes);
+    }
+
+    public <M> Diff<M> diffModels(
+        final M before,
+        final M after,
+        final Iterable<SchemaAttribute<M, Object>> attributes
+    ) {
         final List<Diff.AttributeDiff<M, ?>> changes = new LinkedList<>();
-        for (final SchemaAttribute<M, Object> attribute : modelSchema.getAttributes()) {
+        for (final SchemaAttribute<M, Object> attribute : attributes) {
             diffAttribute(before, after, attribute, changes::add);
         }
         return new Diff<>(before, after, changes);

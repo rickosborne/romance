@@ -21,19 +21,17 @@ import java.util.stream.Stream;
 
 import static org.rickosborne.romance.util.StringStuff.setButNot;
 
+@Getter
 @Slf4j
 public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
     private final static ModelSetter<BookModel> BS = new ModelSetter<>() {
     };
     public static final String DNF_SENTINEL = "DNF";
     public static final String READING_SENTINEL = "reading";
-    @Getter
     private final DbModel dbModel = DbModel.Book;
-    @Getter
     private final Map<String, BiConsumer<BookModel, Object>> setters = Stream
         .of(SheetFields.values())
         .collect(Collectors.toMap(Enum::name, sf -> sf.setter));
-    @Getter
     private final Map<SchemaAttribute<BookModel, ?>, ModelSetter<BookModel>> sheetFields = Stream
         .of(SheetFields.values())
         .filter(sf -> sf.bookAttribute != null && sf.safeToWriteToSheet)
@@ -61,7 +59,10 @@ public class BookSheetAdapter implements ModelSheetAdapter<BookModel> {
         audiobookDurationHours(BookAttributes.durationHours, true, BS.doubleSetter(BookModel::setDurationHours)),
         datePublish(BookAttributes.datePublish, true, BS.localDateSetter(BookModel::setDatePublish)),
         datePurchase(BookAttributes.datePurchase, true, BS.localDateSetter(BookModel::setDatePurchase)),
-        dateRead((BookModel m, Object o) -> {
+        dateRead(BookAttributes.dateRead, true, (BookModel m, Object o) -> {
+            if (m == null || m.getDateRead() != null) {
+                return;
+            }
             if ((o instanceof String) && ((String) o).contains(READING_SENTINEL)) {
                 m.setReading(true);
             } else if ((o instanceof String) && ((String) o).contains(DNF_SENTINEL)) {

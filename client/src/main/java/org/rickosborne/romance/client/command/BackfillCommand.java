@@ -33,7 +33,7 @@ public class BackfillCommand extends ASheetCommand {
             final BookModel sheetBook = indexedBook.getModel();
             final int bookRowNum = indexedBook.getRowNum();
             final BookUrls sheetUrls = new BookUrls(sheetBook);
-            if (sheetUrls.anyNull() || (sheetBook.getDatePurchase() == null && sheetBook.getRatings().get(BookRating.Overall) != null)) {
+            if (sheetUrls.anyNull() || sheetBook.getDatePurchase() == null || sheetBook.getRatings().get(BookRating.Overall) != null) {
                 log.info("Trying to backfill: {}", sheetBook);
                 final BookModel extended = bookBot.extendAll(sheetBook);
                 final Map<String, String> bookChanges = bookData.getModelSheetAdapter().findChangesToSheet(sheetBook, extended);

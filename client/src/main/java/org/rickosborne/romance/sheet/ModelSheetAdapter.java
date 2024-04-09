@@ -7,20 +7,44 @@ import org.rickosborne.romance.db.Diff;
 import org.rickosborne.romance.db.SchemaDiff;
 import org.rickosborne.romance.db.model.SchemaAttribute;
 import org.rickosborne.romance.util.ModelSetter;
-import org.rickosborne.romance.util.Pair;
 
 import java.net.URL;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public interface ModelSheetAdapter<M> extends ModelSetter<M> {
 
     default M buildModel() {
         return getDbModel().buildModel();
+    }
+
+    default Map<String, String> changesForDiff(
+        final Diff<M> diff,
+        final Predicate<SchemaAttribute<M, ?>> attributePredicate,
+        final Map<SchemaAttribute<M, ?>, ModelSetter<M>> sheetFields
+    ) {
+        final Map<String, String> map = new HashMap<>();
+        for (final Diff.AttributeDiff<M, ?> change : diff.getChanges()) {
+            if (change.getOperation() != Diff.Operation.Add && change.getOperation() != Diff.Operation.Change) {
+                continue;
+            }
+            if (attributePredicate != null && !attributePredicate.test(change.getAttribute())) {
+                continue;
+            }
+            final ModelSetter<M> setter = sheetFields.get(change.getAttribute());
+            final Object afterValue = change.getAfterValue();
+            if (setter == null || afterValue == null) {
+                continue;
+            }
+            final String fieldName = ((Enum<?>) setter).name();
+            System.out.printf("%s: %s => %s%n", fieldName, change.getBeforeValue(), afterValue);
+            map.put(fieldName, afterValue.toString());
+        }
+        return map;
     }
 
     String fileNameForModel(@NonNull final M model, @NonNull final NamingConvention namingConvention);
@@ -39,13 +63,7 @@ public interface ModelSheetAdapter<M> extends ModelSetter<M> {
         final Predicate<SchemaAttribute<M, ?>> attributePredicate
     ) {
         final Map<SchemaAttribute<M, ?>, ModelSetter<M>> sheetFields = getSheetFields();
-        return new SchemaDiff().diffModels(sheetRecord, existingRecord).getChanges().stream()
-            .filter(c -> c.getOperation() == Diff.Operation.Add || c.getOperation() == Diff.Operation.Change)
-            .filter(c -> attributePredicate == null || attributePredicate.test(c.getAttribute()))
-            .map(c -> Pair.build(c, sheetFields.get(c.getAttribute())))
-            .filter(p -> p.hasRight() && p.getLeft().getAfterValue() != null)
-            .peek(p -> System.out.printf("%s: %s => %s%n", ((Enum<?>) p.getRight()).name(), p.getLeft().getBeforeValue(), p.getLeft().getAfterValue()))
-            .collect(Collectors.toMap(p -> ((Enum<?>) p.getRight()).name(), p -> p.getLeft().getAfterValue().toString()));
+        return changesForDiff(new SchemaDiff().diffModels(sheetRecord, existingRecord), attributePredicate, sheetFields);
     }
 
     DbModel getDbModel();

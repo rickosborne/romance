@@ -23,7 +23,7 @@ public enum BookAttributes implements EnumSchemaAttribute<BookModel> {
     breakup(BookModel::getBreakup, BookModel::setBreakup, String.class),
     datePublish(BookModel::getDatePublish, BookModel::setDatePublish, LocalDate.class, SchemaAttribute::earlierSameYear),
     datePurchase(BookModel::getDatePurchase, BookModel::setDatePurchase, LocalDate.class, SchemaAttribute::earlierSameYear),
-    dateRead(BookModel::getDateRead, BookModel::setDateRead, LocalDate.class),
+    dateRead(BookModel::getDateRead, BookModel::setDateRead, LocalDate.class, SchemaAttribute::keepIfNotNull),
     dnf(BookModel::getDnf, BookModel::setDnf, Boolean.class),
     durationHours(BookModel::getDurationHours, BookModel::setDurationHours, Double.class),
     feelBad(BookModel::getFeelBad, BookModel::setFeelBad, String.class),

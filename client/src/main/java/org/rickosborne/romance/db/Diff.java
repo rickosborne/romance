@@ -7,7 +7,6 @@ import org.rickosborne.romance.db.model.SchemaAttribute;
 
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.rickosborne.romance.util.StringStuff.CRLF;
 
