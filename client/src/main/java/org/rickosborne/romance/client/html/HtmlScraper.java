@@ -23,9 +23,12 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -34,6 +37,7 @@ import java.util.function.Predicate;
 public class HtmlScraper {
     public static final String HTML_FILE_EXTENSION = ".html";
     public static final int TIMEOUT_MS = 9000;
+    private static final Map<String, LocalDateTime> waitUntil = new ConcurrentHashMap<>();
 
     public static void expire(
         @NonNull final URL url,
@@ -49,7 +53,7 @@ public class HtmlScraper {
         final Instant lastModified = Instant.ofEpochMilli(lastModifiedMs);
         if (Instant.now().minus(maxAge).isAfter(lastModified)) {
             if (!file.delete()) {
-                log.warn("Could not delete: " + file);
+                log.warn("Could not delete: {}", file);
             }
         }
     }
@@ -113,7 +117,7 @@ public class HtmlScraper {
         final File file = cachePath.resolve(fileName).toFile();
         if (!cachePath.toFile().exists()) {
             if (!cachePath.toFile().mkdirs()) {
-                log.warn("Could not create cachePath: " + cachePath);
+                log.warn("Could not create cachePath: {}", cachePath);
             }
         }
         if (file.isFile()) {
@@ -121,9 +125,9 @@ public class HtmlScraper {
                 final long lastModMS = file.lastModified();
                 final Instant lastModInstant = Instant.ofEpochMilli(lastModMS);
                 if (lastModInstant.plus(maxAge).isBefore(Instant.now())) {
-                    log.info("Cache is out of date: " + file);
+                    log.info("Cache is out of date: {}", file);
                     if (!file.delete()) {
-                        log.warn("Could not delete: " + file);
+                        log.warn("Could not delete: {}", file);
                     }
                     return null;
                 }
@@ -164,7 +168,14 @@ public class HtmlScraper {
                     return new HtmlScraper(scrape.cachePath, scrape.cookieStore, cachedDoc, scrape.url);
                 }
                 if (scrape.delay != null) {
-                    Thread.sleep(scrape.delay);
+                    final String host = scrape.url.getHost();
+                    final LocalDateTime maybeNext = waitUntil.get(host);
+                    final Long ms = maybeNext == null ? null : ChronoUnit.MILLIS.between(LocalDateTime.now(), maybeNext);
+                    if (ms != null && ms > 0) {
+                        log.info("Sleeping {}ms for {}", ms, host);
+                        Thread.sleep(ms);
+                    }
+                    waitUntil.put(host, LocalDateTime.now().plus(scrape.delay, ChronoUnit.MILLIS));
                 }
             }
             final String scrapeUrl = scrape.url.toString();
@@ -333,6 +344,7 @@ public class HtmlScraper {
         Integer delay;
         Map<String, String> headers;
         Duration maxAge;
-        @NonNull URL url;
+        @NonNull
+        URL url;
     }
 }

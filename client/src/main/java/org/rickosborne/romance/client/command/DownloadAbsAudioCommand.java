@@ -102,6 +102,7 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
         } else {
             infoPredicate = (info) -> true;
         }
+        final List<Predicate<BookModel>> ignoredDownloads = IgnoredBooks.getIgnoredDownloads();
         final List<BookModel> books = bot.fetchAudiobooksWithInfoFilter(infoPredicate);
         final ArrayList<BookModel> todo = (ArrayList<BookModel>) books.stream()
             .filter(IgnoredBooks::isNotIgnored)
@@ -110,10 +111,18 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                     log.info("Already downloaded: {}", book);
                     return false;
                 }
+                if (ignoredDownloads.stream().anyMatch(p -> p.test(book))) {
+                    log.info("Ignored: {}", book);
+                    return false;
+                }
                 return true;
             })
             .sorted(Comparator.comparing(BookModel::getDatePurchase))
             .collect(Collectors.toList());
+        if (todo.isEmpty()) {
+            log.info("Nothing to do.");
+            return 0;
+        }
         final List<BookModel> sheetBooks = getSheetStoreFactory()
             .buildSheetStore(BookModel.class)
             .getRecords().stream()
