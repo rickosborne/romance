@@ -9,7 +9,7 @@ import org.rickosborne.romance.AudiobookStore;
 import org.rickosborne.romance.client.AudiobookStoreSuggestService;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.client.response.BookInformation;
-import org.rickosborne.romance.client.response.LibraryFile;
+import org.rickosborne.romance.client.response.LibraryFileV2;
 import org.rickosborne.romance.db.model.BookAttributes;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.util.BookBot;
@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -65,14 +66,21 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
         Pattern.compile("^(?<author>.+?)\\s+\\(.*?\\)\\s+(?<title>.+?)$")
     );
     private final static Pattern MULTI_AUTHOR_PATTERN = Pattern.compile("^(.+?)(?:\\s*,\\s+|\\s+and\\s+)(.+?)$", Pattern.CASE_INSENSITIVE);
+    private static final List<Pattern> TITLE_BLOCKLIST = List.of(
+        Pattern.compile("\\s+\\[File \\d+ of \\d+]")
+    );
     @CommandLine.Option(names = {"--audio-path"}, description = "Path to a directory where audio already exists", required = true)
     private List<File> audioPaths;
     @CommandLine.Option(names = {"--cookie-header"}, description = "Cookie header", required = false)
     private String cookieHeader;
+    @CommandLine.Option(names = {"--dry-run"}, description = "Do not download anything", required = false)
+    private boolean dryRun = false;
     @CommandLine.Option(names = {"--out-path"}, description = "Path to a directory where audio will be saved", required = true)
     private Path outPath;
     @CommandLine.Option(names = {"--purchased-after"}, description = "Purchased after", required = false)
     private Date purchasedAfter;
+    @CommandLine.Option(names = {"--rvt"}, description = "Request Verification Token", required = true)
+    private String requestVerificationToken;
 
     @SneakyThrows
     @Override
@@ -104,10 +112,12 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
         }
         final List<Predicate<BookModel>> ignoredDownloads = IgnoredBooks.getIgnoredDownloads();
         final List<BookModel> books = bot.fetchAudiobooksWithInfoFilter(infoPredicate);
+        final Set<String> seen = new ConcurrentSkipListSet<>();
         final ArrayList<BookModel> todo = (ArrayList<BookModel>) books.stream()
             .filter(IgnoredBooks::isNotIgnored)
             .filter(book -> {
-                if (existing.containsKey(hashKeyForBook(book))) {
+                final String hashKey = hashKeyForBook(book);
+                if (existing.containsKey(hashKey)) {
                     log.info("Already downloaded: {}", book);
                     return false;
                 }
@@ -115,6 +125,10 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                     log.info("Ignored: {}", book);
                     return false;
                 }
+                if (seen.contains(hashKey)) {
+                    return false;
+                }
+                seen.add(hashKey);
                 return true;
             })
             .sorted(Comparator.comparing(BookModel::getDatePurchase))
@@ -128,18 +142,25 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
             .getRecords().stream()
             .map(SheetStuff.Indexed::getModel)
             .collect(Collectors.toUnmodifiableList());
-        todo
-            .forEach(book -> {
-                sheetBooks.stream()
-                    .filter(bookLikeFilter(book))
-                    .findAny()
-                    .ifPresent(sheetBook -> {
-                        book.setDatePublish(sheetBook.getDatePublish());
-                        book.setImageUrl(sheetBook.getImageUrl());
-                    });
-                log.info("Need to download: {} ({}) {}", book, book.getDatePurchase(), book.getAudiobookStoreSku());
-            });
-        fetchBooksAudio(todo, bot);
+        final ArrayList<BookModel> readyToFetch = new ArrayList<>(todo.size());
+        for (int i = 0; i < todo.size(); i++) {
+            BookModel book = todo.get(i);
+            final BookModel sheetBook = sheetBooks.stream()
+                .filter(bookLikeFilter(book))
+                .findAny()
+                .orElse(null);
+            if (sheetBook != null) {
+                book.setDatePublish(sheetBook.getDatePublish());
+                book.setImageUrl(sheetBook.getImageUrl());
+            }
+            book = bot.extendWithAudiobookStoreDetails(book);
+            book = bot.extendWithAudiobookStoreBookInformation(book);
+            log.info("Need to download: {}. {} ({}) {}", i + 1, book, book.getDatePurchase(), book.getAudiobookStoreSku());
+            readyToFetch.add(book);
+        }
+        if (!dryRun) {
+            fetchBooksAudio(readyToFetch, bot);
+        }
         return 0;
     }
 
@@ -168,6 +189,17 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                 final String value = pair.getLeft();
                 attr.setAttribute(book, value);
             });
+        String title = book.getTitle();
+        if (title == null || title.isBlank()) {
+            return;
+        }
+        for (final Pattern pattern : TITLE_BLOCKLIST) {
+            title = pattern.matcher(title).replaceAll("").strip();
+        }
+        if (title.isBlank()) {
+            return;
+        }
+        book.setTitle(title);
         final List<BookModel> toAdd = new LinkedList<>();
         toAdd.add(book);
         final Matcher matcher = MULTI_AUTHOR_PATTERN.matcher(book.getAuthorName());
@@ -210,17 +242,19 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
             }
             final AudiobookStoreSuggestService service = bot.getAudiobookStoreSuggestService();
             try {
-                final Response<List<LibraryFile>> libraryFilesResponse = service.getMyLibraryFiles(
-                    AudiobookStoreSuggestService.MyLibraryFilesMethod.GetM4bFiles.name(),
+                log.info("Book: {} {}", book.toString(), book.getAudiobookStoreSku());
+                final Response<List<LibraryFileV2>> libraryFilesResponse = service.getMyLibraryFiles(
+                    // AudiobookStoreSuggestService.MyLibraryFilesMethod.GetM4bFiles.name(),
                     book.getAudiobookStoreSku(),
+                    requestVerificationToken,
                     cookieHeader
                 ).execute();
                 if (libraryFilesResponse.isSuccessful()) {
-                    final List<LibraryFile> libraryFilesList = libraryFilesResponse.body();
+                    final List<LibraryFileV2> libraryFilesList = libraryFilesResponse.body();
                     if (libraryFilesList != null && !libraryFilesList.isEmpty()) {
                         final int fileCount = libraryFilesList.size();
                         for (int i = 0; i < fileCount; i++) {
-                            final LibraryFile libraryFile = libraryFilesList.get(i);
+                            final LibraryFileV2 libraryFile = libraryFilesList.get(i);
                             final String fileName = fileNameForBook(book) + (fileCount > 1 ? " " + (i + 1) : "") + ".m4b";
                             log.info("Downloading: {}", fileName);
                             final File partFile = outPath.resolve(fileName + ".part").toFile();
@@ -247,7 +281,7 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                                         log.warn("Could not rename {} -> {}", partFile, doneFile);
                                     }
                                 } else {
-                                    log.error("Download was not successful: {}", download.message());
+                                    log.error("Download was not successful: {}, {}", download.code(), download.message());
                                 }
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
@@ -257,7 +291,7 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                         log.error("Did not get result from library files: {}", libraryFilesResponse.message());
                     }
                 } else {
-                    log.error("Did not fetch library files: {}", libraryFilesResponse.message());
+                    log.error("Did not fetch library files: {}, {}", libraryFilesResponse.code(), libraryFilesResponse.message());
                 }
             } catch (IOException err) {
                 log.error("Failed to fetch library files", err);

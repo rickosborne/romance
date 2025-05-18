@@ -5,7 +5,7 @@ import lombok.NonNull;
 import okhttp3.ResponseBody;
 import org.rickosborne.romance.AudiobookStore;
 import org.rickosborne.romance.client.response.AudiobookStoreSuggestion;
-import org.rickosborne.romance.client.response.LibraryFile;
+import org.rickosborne.romance.client.response.LibraryFileV2;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.util.BookMerger;
 import org.slf4j.LoggerFactory;
@@ -31,8 +31,8 @@ public interface AudiobookStoreSuggestService {
     Path CACHE_BASE_PATH = Path.of(".cache");
     String CACHE_NAME = "abs";
     int DELAY_SECONDS = 5;
-    String DOWNLOAD_PATH = "/download-file.aspx";
-    String MY_LIBRARY_PATH = "/Handlers/MyLibraryHandler.ashx";
+    String DOWNLOAD_PATH = "/DownloadFile";
+    String MY_LIBRARY_PATH = "/Handlers/MyLibrary?handler=GetAudioFileDetails&Format=2";
     String SUGGEST_PATH = "/Handlers/SearchSuggestHandler.ashx?SearchType=100";
 
     static AudiobookStoreSuggestService build() {
@@ -112,9 +112,10 @@ public interface AudiobookStoreSuggestService {
         "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/116.0",
         "X-Requested-With: XMLHttpRequest"
     })
-    Call<List<LibraryFile>> getMyLibraryFiles(
-        @Query("Method") String method,
+    Call<List<LibraryFileV2>> getMyLibraryFiles(
+        // @Query("Method") String method,
         @Query("BookId") String sku,
+        @Query("__RequestVerificationToken") String requestVerificationToken,
         @Header("Cookie") String cookieHeader
     );
 
