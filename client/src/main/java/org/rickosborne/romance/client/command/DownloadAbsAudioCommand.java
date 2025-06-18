@@ -81,6 +81,8 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
     private Date purchasedAfter;
     @CommandLine.Option(names = {"--rvt"}, description = "Request Verification Token", required = true)
     private String requestVerificationToken;
+    @CommandLine.Option(names = {"--with-sheet"}, description = "Correlate with spreadsheet", required = false)
+    private boolean withSheet = false;
 
     @SneakyThrows
     @Override
@@ -137,15 +139,15 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
             log.info("Nothing to do.");
             return 0;
         }
-        final List<BookModel> sheetBooks = getSheetStoreFactory()
+        final List<BookModel> sheetBooks = withSheet ? getSheetStoreFactory()
             .buildSheetStore(BookModel.class)
             .getRecords().stream()
             .map(SheetStuff.Indexed::getModel)
-            .collect(Collectors.toUnmodifiableList());
+            .collect(Collectors.toUnmodifiableList()) : null;
         final ArrayList<BookModel> readyToFetch = new ArrayList<>(todo.size());
         for (int i = 0; i < todo.size(); i++) {
             BookModel book = todo.get(i);
-            final BookModel sheetBook = sheetBooks.stream()
+            final BookModel sheetBook = sheetBooks == null ? null : sheetBooks.stream()
                 .filter(bookLikeFilter(book))
                 .findAny()
                 .orElse(null);
@@ -153,6 +155,8 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                 book.setDatePublish(sheetBook.getDatePublish());
                 book.setImageUrl(sheetBook.getImageUrl());
             }
+            book = bot.extendWithAudiobookStorePurchase(book);
+            book = bot.extendWithAudiobookStoreSuggestion(book);
             book = bot.extendWithAudiobookStoreDetails(book);
             book = bot.extendWithAudiobookStoreBookInformation(book);
             log.info("Need to download: {}. {} ({}) {}", i + 1, book, book.getDatePurchase(), book.getAudiobookStoreSku());
@@ -178,46 +182,48 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
             // log.warn("Did not match any patterns: {}", baseName);
             return;
         }
-        final BookModel book = BookModel.build();
-        matchers.stream()
-            .flatMap(matcher -> FILE_NAME_ATTRIBUTES.entrySet().stream()
-                .filter((entry) -> matcher.pattern().pattern().contains("?<" + entry.getKey() + ">"))
-                .map(entry -> Pair.build(matcher.group(entry.getKey()), entry.getValue()))
-                .filter(pair -> pair.getRight().getAttribute(book) == null))
-            .forEach(pair -> {
-                final BookAttributes attr = pair.getRight();
-                final String value = pair.getLeft();
-                attr.setAttribute(book, value);
-            });
-        String title = book.getTitle();
-        if (title == null || title.isBlank()) {
-            return;
-        }
-        for (final Pattern pattern : TITLE_BLOCKLIST) {
-            title = pattern.matcher(title).replaceAll("").strip();
-        }
-        if (title.isBlank()) {
-            return;
-        }
-        book.setTitle(title);
-        final List<BookModel> toAdd = new LinkedList<>();
-        toAdd.add(book);
-        final Matcher matcher = MULTI_AUTHOR_PATTERN.matcher(book.getAuthorName());
-        if (matcher.find()) {
-            final String a1 = matcher.group(1);
-            final String a2 = matcher.group(2);
-            final BookModel b1 = book.toBuilder().authorName(a1).build();
-            final BookModel b2 = book.toBuilder().authorName(a2).build();
-            toAdd.add(b1);
-            toAdd.add(b2);
-        }
-        log.info("Found {}", book);
-        toAdd.forEach(b -> {
-            final String hashKey = hashKeyForBook(b);
-            if (!books.containsKey(hashKey)) {
-                books.put(hashKey, Pair.build(b, file));
+        for (final Matcher matcher : matchers) {
+            final BookModel book = BookModel.build();
+            for (final Map.Entry<String, BookAttributes> entry : FILE_NAME_ATTRIBUTES.entrySet()) {
+                if (matcher.pattern().pattern().contains("?<" + entry.getKey() + ">")) {
+                    final Pair<String, BookAttributes> pair = Pair.build(matcher.group(entry.getKey()), entry.getValue());
+                    if (pair.getRight().getAttribute(book) == null) {
+                        final BookAttributes attr = pair.getRight();
+                        final String value = pair.getLeft();
+                        attr.setAttribute(book, value);
+                    }
+                }
             }
-        });
+            String title = book.getTitle();
+            if (title == null || title.isBlank()) {
+                return;
+            }
+            for (final Pattern pattern : TITLE_BLOCKLIST) {
+                title = pattern.matcher(title).replaceAll("").strip();
+            }
+            if (title.isBlank()) {
+                return;
+            }
+            book.setTitle(title);
+            final List<BookModel> toAdd = new LinkedList<>();
+            toAdd.add(book);
+            final Matcher mapMatcher = MULTI_AUTHOR_PATTERN.matcher(book.getAuthorName());
+            if (mapMatcher.find()) {
+                final String a1 = mapMatcher.group(1);
+                final String a2 = mapMatcher.group(2);
+                final BookModel b1 = book.toBuilder().authorName(a1).build();
+                final BookModel b2 = book.toBuilder().authorName(a2).build();
+                toAdd.add(b1);
+                toAdd.add(b2);
+            }
+            log.info("Found {}", book);
+            toAdd.forEach(b -> {
+                final String hashKey = hashKeyForBook(b);
+                if (!books.containsKey(hashKey)) {
+                    books.put(hashKey, Pair.build(b, file));
+                }
+            });
+        }
     }
 
     private void fetchBooksAudio(

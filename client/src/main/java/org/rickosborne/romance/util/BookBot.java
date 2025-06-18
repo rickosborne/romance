@@ -293,7 +293,7 @@ public class BookBot {
         }
         final BookInformation info2 = getAudiobookStoreCache().fetchFomCache(new TypeReference<>() {
         }, s -> {
-            log.info("Fetch: BookInformation for " + sku + ", " + original);
+            log.info("Fetch: BookInformation for {}, {}", sku, original);
             return s.bookInformation(userGuid, sku);
         }, userGuid + sku);
         return info2 == null ? null : modelFromBookInformation(info2);

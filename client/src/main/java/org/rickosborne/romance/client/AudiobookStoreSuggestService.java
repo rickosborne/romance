@@ -20,8 +20,6 @@ import retrofit2.http.Streaming;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.function.UnaryOperator;
 
 import static org.rickosborne.romance.util.StringStuff.fuzzyMatch;
@@ -33,7 +31,7 @@ public interface AudiobookStoreSuggestService {
     int DELAY_SECONDS = 5;
     String DOWNLOAD_PATH = "/DownloadFile";
     String MY_LIBRARY_PATH = "/Handlers/MyLibrary?handler=GetAudioFileDetails&Format=2";
-    String SUGGEST_PATH = "/Handlers/SearchSuggestHandler.ashx?SearchType=100";
+    String SUGGEST_PATH = "/SearchSuggest?SearchType=100";
 
     static AudiobookStoreSuggestService build() {
         return new Retrofit.Builder()
@@ -79,14 +77,20 @@ public interface AudiobookStoreSuggestService {
             return null;
         }
         final String sku = nullIfBlank(audiobookStoreSku);
-        final UnaryOperator<BookModel> filterBooks = Optional.ofNullable(filter).orElse(b -> b);
-        return suggestions.stream()
-            .filter(s -> (sku == null || sku.equals(s.getKeyId())) && (fuzzyMatch(lcTitle, s.getTitle()) || fuzzyMatch(lcTitle, s.getCleanTitle().toLowerCase())))
-            .map(BookMerger::modelFromAudiobookStoreSuggestion)
-            .map(filterBooks)
-            .filter(Objects::nonNull)
-            .findAny()
-            .orElse(null);
+        for (final AudiobookStoreSuggestion suggestion : suggestions) {
+            final String suggestionSKU = suggestion.getKeyId();
+            if (sku != null && (suggestionSKU == null || !suggestionSKU.equals(sku))) {
+                continue;
+            }
+            if (fuzzyMatch(lcTitle, suggestion.getTitle()) || fuzzyMatch(lcTitle, suggestion.getCleanTitle().toLowerCase())) {
+                final BookModel fromSuggestion = BookMerger.modelFromAudiobookStoreSuggestion(suggestion);
+                final BookModel book = filter == null ? fromSuggestion : filter.apply(fromSuggestion);
+                if (book != null) {
+                    return book;
+                }
+            }
+        }
+        return null;
     }
 
     default BookModel findBookLike(

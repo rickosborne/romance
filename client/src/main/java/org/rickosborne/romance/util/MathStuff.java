@@ -11,7 +11,11 @@ public class MathStuff {
     public static Double doubleFromDuration(final String duration) {
         String text = duration;
         if (!text.startsWith("PT")) {
-            text = "PT" + text;
+            if (text.startsWith("P")) {
+                text = "PT" + text.substring(1);
+            } else {
+                text = "PT" + text;
+            }
         }
         final long minutes = Duration.parse(text).toMinutes();
         return round(minutes / 60d, 0.01d);

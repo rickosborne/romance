@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
@@ -47,6 +48,7 @@ import static org.rickosborne.romance.util.StringStuff.removeToken;
 import static org.rickosborne.romance.util.StringStuff.setButNot;
 import static org.rickosborne.romance.util.StringStuff.urlFromString;
 
+@Slf4j
 @RequiredArgsConstructor
 public class AudiobookStoreHtml implements ILinkedData {
     @SuppressWarnings("SpellCheckingInspection")
@@ -105,6 +107,7 @@ public class AudiobookStoreHtml implements ILinkedData {
     public BookModel getBookModelFromBook(@NonNull final URL url) {
         final BookModel book = BookModel.builder().build();
         book.setAudiobookStoreUrl(url);
+        log.info("Fetch TABS book details: {}", url);
         return getFromBook(book, url, BookModelLD.values(), BookModelHtml.values());
     }
 
