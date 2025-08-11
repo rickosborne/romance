@@ -16,11 +16,12 @@
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/info/picocli/picocli-codegen/4.7.7/picocli-codegen-4.7.7.jar" />
           <entry name="$MAVEN_REPOSITORY$/info/picocli/picocli/4.7.7/picocli-4.7.7.jar" />
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.32/lombok-1.18.32.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.38/lombok-1.18.38.jar" />
         </processorPath>
         <module name="audiobookstore-client" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel target="24" />
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_STRING" value="-Xlint:unchecked" />

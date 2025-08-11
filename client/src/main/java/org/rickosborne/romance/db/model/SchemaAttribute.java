@@ -18,7 +18,7 @@ public interface SchemaAttribute<M, A> {
     }
 
     default A chooseAttributeValue(final A left, final A right) {
-        if (right == null) {
+        if (right == null || (right instanceof String && ((String) right).isBlank())) {
             return left;
         } else {
             return right;

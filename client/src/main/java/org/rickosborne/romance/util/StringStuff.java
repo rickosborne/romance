@@ -1,6 +1,7 @@
 package org.rickosborne.romance.util;
 
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.net.MalformedURLException;
@@ -15,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -23,7 +25,19 @@ import java.util.stream.Stream;
 import static org.apache.commons.text.StringEscapeUtils.unescapeHtml4;
 
 
+@Slf4j
 public class StringStuff {
+    public static final Set<String> BLOCKED_NAMES = Set.of(
+        "Narrator Info Added Soon",
+        "Narrator",
+        "MS",
+        "PhD"
+    );
+    public static final List<Pattern> BLOCKED_NAME_PATTERNS = List.of(
+        Pattern.compile("^More by "),
+        Pattern.compile("^(Dr|Mr|Ms|Mrs)\\.?\\s*"),
+        Pattern.compile(",(\\s*(MS|PhD))+$")
+    );
     public static final Pattern BOOLEAN = Pattern.compile("^(?:true|false)$", Pattern.CASE_INSENSITIVE);
     public static final String CRLF = "\n";
     public static final int FILE_NAME_MAX_LENGTH = 150;
@@ -110,6 +124,27 @@ public class StringStuff {
         return t;
     }
 
+    public static String formatMS(final Integer ms) {
+        if (ms == null) {
+            return "";
+        }
+        int rem = ms;
+        final int msec = rem % 1000;
+        rem /= 1000;
+        final int sec = rem % 60;
+        rem /= 60;
+        final int min = rem % 60;
+        final int hour = rem / 60;
+        String f = "";
+        if (hour > 0) {
+            return zeroPad(hour, 2) + ":" + zeroPad(min, 2) + ":" + zeroPad(sec, 2);
+        } else if (min > 0) {
+            return zeroPad(min, 2) + ":" + zeroPad(sec, 2);
+        } else {
+            return sec + "." + zeroPad(msec, 3);
+        }
+    }
+
     public static boolean fuzzyListMatch(final String a, final String b) {
         if (a == null || b == null) {
             return false;
@@ -150,6 +185,23 @@ public class StringStuff {
         return s != null && NUMERIC.matcher(s).matches();
     }
 
+    public static boolean isSorted(@NonNull final List<String> list) {
+        if (list.isEmpty()) {
+            return true;
+        }
+        String last = null;
+        for (final String next : list) {
+            if (next == null) {
+                continue;
+            }
+            if (last != null && last.compareTo(next) > 0) {
+                return false;
+            }
+            last = next;
+        }
+        return true;
+    }
+
     public static String joinSorted(final String delim, final Collection<String> set) {
         if (set == null || set.isEmpty()) {
             return null;
@@ -169,12 +221,8 @@ public class StringStuff {
         if (name == null || name.isBlank()) {
             return null;
         }
-        final String[] names = name.split("\\s*(?:\\s+and|&|;)\\s+");
-        if (names.length == 1) {
-            return name;
-        } else {
-            return Stream.of(names).sorted().collect(Collectors.joining(", "));
-        }
+        return splitNames(name)
+            .collect(Collectors.joining(", "));
     }
 
     public static String nullIfBlank(final String s) {
@@ -212,6 +260,30 @@ public class StringStuff {
             }
             downstream.accept(t, v);
         };
+    }
+
+    public static List<String> sortIfNeeded(final List<String> list) {
+        if (list != null && !isSorted(list)) {
+            return list.stream().sorted().collect(Collectors.toList());
+        }
+        return list;
+    }
+
+    public static Stream<String> splitNames(final String name) {
+        if (name == null || name.isBlank()) {
+            return Stream.empty();
+        }
+        return Stream.of(name.split("\\s*(?:\\s+and|&|;|,)\\s+"))
+            .distinct()
+            .sorted()
+            .map((o) -> {
+                String n = o.trim();
+                for (final Pattern pattern : BLOCKED_NAME_PATTERNS) {
+                    n = pattern.matcher(n).replaceAll("").trim();
+                }
+                return n;
+            })
+            .filter(n -> !BLOCKED_NAMES.contains(n) && !n.isBlank());
     }
 
     public static String starsFromNumber(final Double num) {
@@ -301,5 +373,32 @@ public class StringStuff {
         } catch (MalformedURLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static URL urlFromString(final String url, final String base) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        try {
+            if (url.startsWith("http")) {
+                return new URL(url);
+            }
+            if (url.startsWith("/")) {
+                return new URL(base + url);
+            }
+            log.warn("Unknown URL format: '{}' + base '{}'", url, base);
+            return null;
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String zeroPad(final int num, final int width) {
+        final String s = String.valueOf(num);
+        final int zeros = width - s.length();
+        if (zeros < 1) {
+            return s;
+        }
+        return "0".repeat(zeros) + s;
     }
 }

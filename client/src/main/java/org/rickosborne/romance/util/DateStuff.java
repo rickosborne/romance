@@ -4,13 +4,29 @@ import org.rickosborne.romance.client.html.English;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
 public class DateStuff {
 
     public static final Pattern MONTH_DAY_YEAR_PATTERN = Pattern.compile("^(?<mo>\\w+)\\s+(?<day>[0-9]+),?\\s+(?<year>[0-9]+)$");
+
+    public static String asId() {
+        return asId(LocalDateTime.now());
+    }
+
+    public static String asId(final LocalDate date) {
+        return asId(date.atTime(LocalTime.MIDNIGHT));
+    }
+
+    public static String asId(final LocalDateTime dateTime) {
+        return dateTime.format(ISO_LOCAL_DATE_TIME).replace("T", "-").replaceAll(":", "");
+    }
 
     public static LocalDate fromMonthDayYear(final String text) {
         if (text == null || text.isBlank()) {

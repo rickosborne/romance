@@ -1,5 +1,6 @@
 package org.rickosborne.romance.db.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -9,9 +10,12 @@ import org.rickosborne.romance.util.BookRating;
 import org.rickosborne.romance.util.DoubleSerializer;
 import org.rickosborne.romance.util.YesNoUnknown;
 
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.rickosborne.romance.util.MathStuff.fourPlaces;
 
@@ -19,14 +23,18 @@ import static org.rickosborne.romance.util.MathStuff.fourPlaces;
 @Builder(toBuilder = true)
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class AuthorModel {
+    public static final Pattern ID_PATTERN = Pattern.compile(".*?/author/show/(\\d+)[.].*$");
+
     public static AuthorModel build() {
         return AuthorModel.builder().build();
     }
 
     private URL audiobookStoreUrl;
+    private String bioHtml;
     private Integer dnfCount;
     private Integer fiveStarCount;
     private Integer fourStarPlusCount;
+    private String goodreadsId;
     private URL goodreadsUrl;
     private String mastodonHandle;
     @JsonSerialize(using = DoubleSerializer.class)
@@ -41,6 +49,7 @@ public class AuthorModel {
     @JsonSerialize(using = DoubleSerializer.class)
     private Double odds4;
     private Integer ownedCount;
+    private URL picUrl;
     private String pronouns;
     private YesNoUnknown queer;
     private Integer ratedCount;
@@ -52,6 +61,28 @@ public class AuthorModel {
     private URL storyGraphUrl;
     private String twitterName;
     private URL twitterUrl;
+
+    public void setBioHtml(final String text) {
+        this.bioHtml = text == null || text.isBlank() ? null : text;
+    }
+
+    @JsonIgnore
+    public void setGoodreadsUrlFromString(final String url) {
+        try {
+            setGoodreadsUrl(url == null ? null : new URL(url));
+            if (url != null) {
+                final Matcher matcher = ID_PATTERN.matcher(url);
+                if (matcher.find()) {
+                    final String id = matcher.group(1);
+                    if (id != null) {
+                        setGoodreadsId(id);
+                    }
+                }
+            }
+        } catch (MalformedURLException e) {
+            // do nothing
+        }
+    }
 
     public void setMaxRating(final Double value) {
         if (value != null) {

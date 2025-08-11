@@ -6,7 +6,9 @@ import okhttp3.ResponseBody;
 import org.rickosborne.romance.AudiobookStore;
 import org.rickosborne.romance.client.response.AudiobookStoreSuggestion;
 import org.rickosborne.romance.client.response.LibraryFileV2;
+import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
+import org.rickosborne.romance.util.AuthorMerger;
 import org.rickosborne.romance.util.BookMerger;
 import org.slf4j.LoggerFactory;
 import retrofit2.Call;
@@ -22,6 +24,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.function.UnaryOperator;
 
+import static org.rickosborne.romance.util.BookStuff.cleanAuthor;
 import static org.rickosborne.romance.util.StringStuff.fuzzyMatch;
 import static org.rickosborne.romance.util.StringStuff.nullIfBlank;
 
@@ -59,6 +62,26 @@ public interface AudiobookStoreSuggestService {
         @Header("Cookie") String cookieHeader
     );
 
+    default AuthorModel findAuthorLike(
+        final String name
+    ) {
+        final String lcName = cleanAuthor(name.replaceAll(",.*$", "")).toLowerCase();
+        final List<AudiobookStoreSuggestion> suggestions = buildCaching().fetchFomCache(new TypeReference<>() {
+        }, s -> {
+            LoggerFactory.getLogger(getClass()).info("Fetching TABS suggestions for author: {}", lcName);
+            return s.suggest(lcName);
+        }, lcName);
+        if (suggestions == null) {
+            return null;
+        }
+        for (final AudiobookStoreSuggestion suggestion : suggestions) {
+            if (suggestion.isAuthor() && fuzzyMatch(suggestion.getCleanTitle(), lcName)) {
+                return AuthorMerger.fromAudiobookStoreSuggestion(suggestion);
+            }
+        }
+        return null;
+    }
+
     default BookModel findBookLike(
         final String title,
         final String audiobookStoreSku,
@@ -70,7 +93,7 @@ public interface AudiobookStoreSuggestService {
         final String lcTitle = title.toLowerCase();
         final List<AudiobookStoreSuggestion> suggestions = buildCaching().fetchFomCache(new TypeReference<>() {
         }, s -> {
-            LoggerFactory.getLogger(getClass()).info("Fetching TABS suggestions for: " + lcTitle);
+            LoggerFactory.getLogger(getClass()).info("Fetching TABS suggestions for: {}", lcTitle);
             return s.suggest(lcTitle);
         }, lcTitle);
         if (suggestions == null) {
@@ -78,6 +101,9 @@ public interface AudiobookStoreSuggestService {
         }
         final String sku = nullIfBlank(audiobookStoreSku);
         for (final AudiobookStoreSuggestion suggestion : suggestions) {
+            if (!suggestion.isBook()) {
+                continue;
+            }
             final String suggestionSKU = suggestion.getKeyId();
             if (sku != null && (suggestionSKU == null || !suggestionSKU.equals(sku))) {
                 continue;

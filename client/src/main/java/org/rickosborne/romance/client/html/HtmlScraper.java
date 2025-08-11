@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
+import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -19,6 +20,7 @@ import org.rickosborne.romance.util.StringStuff;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -192,6 +194,8 @@ public class HtmlScraper {
                 }
             }
             return new HtmlScraper(scrape.cachePath, scrape.cookieStore, liveDoc, scrape.url);
+        } catch (SocketTimeoutException | HttpStatusException e) {
+            return new HtmlScraper(scrape.cachePath, scrape.cookieStore, null, scrape.url);
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }

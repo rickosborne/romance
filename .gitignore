@@ -5,4 +5,4 @@ book-data/
 ignored-purchases.csv
 ignored-downloads.tsv
 .DS_Store
-
+out/

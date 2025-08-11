@@ -17,6 +17,11 @@
       <option name="url" value="https://repository.jboss.org/nexus/content/repositories/public/" />
     </remote-repository>
     <remote-repository>
+      <option name="id" value="jaudiotagger-repository" />
+      <option name="name" value="jaudiotagger-repository" />
+      <option name="url" value="https://dl.bintray.com/ijabz/maven" />
+    </remote-repository>
+    <remote-repository>
       <option name="id" value="jboss-maven2-release-repository" />
       <option name="name" value="jboss-maven2-release-repository" />
       <option name="url" value="https://repository.jboss.org/nexus/content/repositories/releases/" />

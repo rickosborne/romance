@@ -40,6 +40,7 @@ import java.util.stream.Collectors;
 
 import static org.rickosborne.romance.AudiobookStore.DELAY_MS;
 import static org.rickosborne.romance.AudiobookStore.MY_LIBRARY_URL;
+import static org.rickosborne.romance.AudiobookStore.SUGGEST_BASE;
 import static org.rickosborne.romance.db.model.SchemaAttribute.earlierSameYear;
 import static org.rickosborne.romance.util.MathStuff.doubleFromDuration;
 import static org.rickosborne.romance.util.ModelSetter.setIfEmpty;
@@ -107,7 +108,7 @@ public class AudiobookStoreHtml implements ILinkedData {
     public BookModel getBookModelFromBook(@NonNull final URL url) {
         final BookModel book = BookModel.builder().build();
         book.setAudiobookStoreUrl(url);
-        log.info("Fetch TABS book details: {}", url);
+        // log.info("Fetch TABS book details: {}", url);
         return getFromBook(book, url, BookModelLD.values(), BookModelHtml.values());
     }
 
@@ -138,7 +139,7 @@ public class AudiobookStoreHtml implements ILinkedData {
                 final BookModel book = BookModel.build();
                 slide.selectMany(".title a", link -> {
                     book.setTitle(link.getAttr("title").trim());
-                    book.setAudiobookStoreUrl(StringStuff.urlFromString(link.getAttr("href").trim()));
+                    book.setAudiobookStoreUrl(StringStuff.urlFromString(link.getAttr("href").trim(), SUGGEST_BASE));
                 });
                 slide.selectMany("img.pro-img.categoryImage", img -> {
                     book.setImageUrl(StringStuff.urlFromString(UrlRank.fixup(img.getAttr("src").trim())));

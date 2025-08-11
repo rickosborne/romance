@@ -4,13 +4,18 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.client.utils.URIBuilder;
+import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.util.BookStuff;
 import org.rickosborne.romance.util.StringStuff;
 import org.rickosborne.romance.util.UrlRank;
 
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -25,6 +30,30 @@ public class GoodreadsHtml {
     public static final Pattern SERIES_NAME_AND_PART = Pattern.compile("\\((?<name>.+?)\\s+#(?<part>.+)\\)");
     private final Path cachePath;
 
+    public AuthorModel getAuthorModel(@NonNull final URL url) {
+        final HtmlScraper scraper = HtmlScraper.forUrlWithDelay(url, cachePath, DELAY_MS, null, null);
+        final AuthorModel author = AuthorModel.build();
+        for (final AuthorPage value : AuthorPage.values()) {
+            value.findAndSet(author, scraper);
+        }
+        final String photoHref = scraper.selectFirst(".authorLeftContainer a[href*=/photo/author/]")
+            .getAttr("href");
+        if (photoHref != null) {
+            try {
+                final URL photoPageUrl = new URIBuilder(url.toString()).setPath(photoHref).build().toURL();
+                final HtmlScraper photoScraper = HtmlScraper.forUrlWithDelay(photoPageUrl, cachePath, DELAY_MS, null, null);
+                final String largestPhotoUrl = photoScraper.selectFirst(".leftContainer a[href*=https://images.gr-assets.com]")
+                    .getAttr("href");
+                if (largestPhotoUrl != null) {
+                    author.setPicUrl(new URL(largestPhotoUrl));
+                }
+            } catch (MalformedURLException | URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return author;
+    }
+
     public BookModel getBookModel(@NonNull final URL url) {
         final HtmlScraper scraper = HtmlScraper.forUrlWithDelay(url, cachePath, DELAY_MS, null, null);
         final BookModel book = BookModel.build();
@@ -35,7 +64,38 @@ public class GoodreadsHtml {
     }
 
     @Getter
+    public enum AuthorPage implements IAuthorPage {
+        bioHtml(AuthorModel::setBioHtml, ".aboutAuthorInfo span:last-of-type", (t) -> Optional.ofNullable(t.getText()).map(b -> b.replaceFirst("<br>\\s+<br>\\s+<i>[^\\x01]*$", "").trim()).orElse(null)),
+        goodreadsId(AuthorModel::setGoodreadsId, "a[href*=/author/show/]", (a) -> Optional.ofNullable(a.getAttr("href")).map((h) -> h.replaceFirst(".+?/[0-9]+[.].*$", "")).orElse(null)),
+        goodreadsUrl(AuthorModel::setGoodreadsUrlFromString, "a[href*=/author/show/]", (a) -> Optional.ofNullable(a.getAttr("href")).map((id) -> id.startsWith("https") ? id : ("https://www.goodreads.com" + id)).orElse(null)),
+        name(AuthorModel::setName, "h1.authorName", HtmlScraper::getText),
+        ;
+        private final String selector;
+        private final BiConsumer<AuthorModel, String> setter;
+        private final Function<HtmlScraper, String> stringifier;
+
+        AuthorPage(
+            @NonNull final BiConsumer<AuthorModel, String> setter,
+            @NonNull final String selector,
+            @NonNull final Function<HtmlScraper, String> stringifier
+        ) {
+            this.setter = setter;
+            this.stringifier = stringifier;
+            this.selector = selector;
+        }
+
+        AuthorPage(
+            @NonNull final BiConsumer<AuthorModel, String> setter,
+            @NonNull final String selector,
+            @NonNull final String attributeName
+        ) {
+            this(setter, selector, s -> s.getAttr(attributeName));
+        }
+    }
+
+    @Getter
     public enum BookPage implements IBookPage {
+        authorGoodreadsUrl(BookModel::setAuthorGoodreadsUrl, "a.ContributorLink", "href"),
         title((b, t) -> b.setTitle(BookStuff.cleanTitle(t)), "meta[property=og:title]", "content"),
         titleLonger((b, t) -> b.setTitle(BookStuff.cleanTitle(t)), "#bookTitle", HtmlScraper::getText),
         goodreadsUrl((b, u) -> b.setGoodreadsUrl(StringStuff.urlFromString(u)), "link[rel=canonical]", "href"),

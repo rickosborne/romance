@@ -47,6 +47,14 @@ public interface ModelSchema<M> {
                 @SuppressWarnings("unchecked") final Importable<Object> resultImportable = (Importable<Object>) attribute.getAttribute(result);
                 resultImportable.importFrom(beforeImportable);
                 resultImportable.importFrom(afterImportable);
+            } else if (attributeType == Integer.class) {
+                final Integer beforeInt = (Integer) beforeValue;
+                final Integer afterInt = (Integer) afterValue;
+                if (afterInt != null && (beforeInt == null || afterInt > 0)) {
+                    attribute.setAttribute(result, afterValue);
+                } else {
+                    attribute.setAttribute(result, beforeValue);
+                }
             } else {
                 attribute.setAttribute(result, resultValue);
             }

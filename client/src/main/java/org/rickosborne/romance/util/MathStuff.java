@@ -5,7 +5,7 @@ import java.time.Duration;
 public class MathStuff {
     public static boolean closeEnough(final Double a, final Double b) {
         return (a == null && b == null)
-            || (a != null && b != null && Math.abs(a - b) < 0.000001);
+            || (a != null && b != null && Math.abs(a - b) <= 0.01);
     }
 
     public static Double doubleFromDuration(final String duration) {

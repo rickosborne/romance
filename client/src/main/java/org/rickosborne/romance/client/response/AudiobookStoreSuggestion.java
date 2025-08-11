@@ -1,10 +1,12 @@
 package org.rickosborne.romance.client.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import org.rickosborne.romance.AudiobookStore;
 import org.rickosborne.romance.util.BookStuff;
+import org.rickosborne.romance.util.StringStuff;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -32,6 +34,8 @@ public class AudiobookStoreSuggestion {
     String title;
     @JsonProperty("TypeId")
     Integer typeId;
+    @JsonProperty("url")
+    String url;
     @JsonProperty("Url")
     String urlPath;
 
@@ -51,14 +55,48 @@ public class AudiobookStoreSuggestion {
     }
 
     public URL getUrl() {
+        if (url != null && !url.isBlank()) {
+            return StringStuff.urlFromString(url);
+        }
         if (urlPath == null || urlPath.isBlank()) {
             return null;
         }
         try {
-            return new URL(AudiobookStore.SUGGEST_BASE + urlPath);
-            // return new URL(AudiobookStore.SUGGEST_BASE + "/audiobooks/" + urlPath + ".aspx");
+            if (urlPath.contains("/audiobooks/") || urlPath.contains("/authors/") || urlPath.contains("/publishers/") || urlPath.contains("/narrators/")) {
+                return new URL(AudiobookStore.SUGGEST_BASE + urlPath);
+            }
+            if (typeId == 2) {
+                return new URL(AudiobookStore.SUGGEST_BASE + "/authors/" + urlPath + ".aspx");
+            }
+            if (typeId == 3) {
+                return new URL(AudiobookStore.SUGGEST_BASE + "/narrators/" + urlPath + ".aspx");
+            }
+            if (typeId == 4) {
+                return new URL(AudiobookStore.SUGGEST_BASE + "/publishers/" + urlPath + ".aspx");
+            }
+            return new URL(AudiobookStore.SUGGEST_BASE + "/audiobooks/" + urlPath + ".aspx");
         } catch (MalformedURLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @JsonIgnore
+    public boolean isAuthor() {
+        return typeId == 2;
+    }
+
+    @JsonIgnore
+    public boolean isBook() {
+        return typeId == 1;
+    }
+
+    @JsonIgnore
+    public boolean isNarrator() {
+        return typeId == 3;
+    }
+
+    @JsonIgnore
+    public boolean isPublisher() {
+        return typeId == 4;
     }
 }

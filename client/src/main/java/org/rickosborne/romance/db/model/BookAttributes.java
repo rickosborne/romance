@@ -17,8 +17,10 @@ import static org.rickosborne.romance.util.StringStuff.setButNot;
 @Getter
 public enum BookAttributes implements EnumSchemaAttribute<BookModel> {
     audiobooksDotComUrl(BookModel::getAudiobooksDotComUrl, BookModel::setAudiobooksDotComUrl, URL.class, SchemaAttribute::keepIfNotNull),
+    audiobookStoreRatings(BookModel::getAudiobookStoreRatings, BookModel::setAudiobookStoreRatings, Integer.class),
     audiobookStoreSku(BookModel::getAudiobookStoreSku, BookModel::setAudiobookStoreSku, String.class, SchemaAttribute::keepIfNotNull),
     audiobookStoreUrl(BookModel::getAudiobookStoreUrl, BookModel::setAudiobookStoreUrl, URL.class, SchemaAttribute::keepIfNotNull),
+    authorGoodreadsUrl(BookModel::getAuthorGoodreadsUrl, BookModel::setAuthorGoodreadsUrl, String.class, SchemaAttribute::keepIfNotNull),
     authorName(BookModel::getAuthorName, BookModel::setAuthorName, String.class, SchemaAttribute::keepIfNotNull),
     breakup(BookModel::getBreakup, BookModel::setBreakup, String.class),
     datePublish(BookModel::getDatePublish, BookModel::setDatePublish, LocalDate.class, SchemaAttribute::earlierSameYear),
@@ -31,9 +33,9 @@ public enum BookAttributes implements EnumSchemaAttribute<BookModel> {
     feelOther(BookModel::getFeelOther, BookModel::setFeelOther, String.class),
     genre(BookModel::getGenre, BookModel::setGenre, String.class),
     goodreadsUrl(BookModel::getGoodreadsUrl, BookModel::setGoodreadsUrl, URL.class, SchemaAttribute::keepIfNotNull),
+    hea(BookModel::getHea, BookModel::setHea, String.class),
     imageUrl(BookModel::getImageUrl, BookModel::setImageUrl, URL.class, UrlRank::choose),
     isbn(BookModel::getIsbn, setButNot(BookModel::setIsbn, "null", ""), String.class, SchemaAttribute::keepIfNotNull),
-    hea(BookModel::getHea, BookModel::setHea, String.class),
     like(BookModel::getLike, BookModel::setLike, String.class),
     location(BookModel::getLocation, BookModel::setLocation, String.class),
     mc1(BookModel::getMc1, null, BookModel.MainChar.class),

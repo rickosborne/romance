@@ -28,20 +28,20 @@ public interface ModelSheetAdapter<M> extends ModelSetter<M> {
         final Map<SchemaAttribute<M, ?>, ModelSetter<M>> sheetFields
     ) {
         final Map<String, String> map = new HashMap<>();
-        for (final Diff.AttributeDiff<M, ?> change : diff.getChanges()) {
-            if (change.getOperation() != Diff.Operation.Add && change.getOperation() != Diff.Operation.Change) {
+        for (final Diff.AttributeDiff<M, ?> change : diff.changes()) {
+            if (change.operation() != Diff.Operation.Add && change.operation() != Diff.Operation.Change) {
                 continue;
             }
-            if (attributePredicate != null && !attributePredicate.test(change.getAttribute())) {
+            if (attributePredicate != null && !attributePredicate.test(change.attribute())) {
                 continue;
             }
-            final ModelSetter<M> setter = sheetFields.get(change.getAttribute());
-            final Object afterValue = change.getAfterValue();
+            final ModelSetter<M> setter = sheetFields.get(change.attribute());
+            final Object afterValue = change.afterValue();
             if (setter == null || afterValue == null) {
                 continue;
             }
             final String fieldName = ((Enum<?>) setter).name();
-            System.out.printf("%s: %s => %s%n", fieldName, change.getBeforeValue(), afterValue);
+            System.out.printf("%s: %s => %s%n", fieldName, change.beforeValue(), afterValue);
             map.put(fieldName, afterValue.toString());
         }
         return map;

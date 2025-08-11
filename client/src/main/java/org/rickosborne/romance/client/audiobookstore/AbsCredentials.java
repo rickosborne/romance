@@ -8,9 +8,11 @@ import java.util.UUID;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AbsCredentials {
+    String cookie;
     String location;
     String password;
     String penName;
+    String requestVerificationToken;
     UUID userGuid;
     String username;
 }

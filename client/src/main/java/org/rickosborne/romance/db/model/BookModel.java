@@ -25,11 +25,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Stream;
 
 import static org.rickosborne.romance.util.BookStuff.cleanAuthor;
 import static org.rickosborne.romance.util.BookStuff.cleanTitle;
 import static org.rickosborne.romance.util.MathStuff.twoPlaces;
 import static org.rickosborne.romance.util.StringStuff.normalizeNames;
+import static org.rickosborne.romance.util.StringStuff.splitNames;
+import static org.rickosborne.romance.util.StringStuff.unescape;
 
 @Data
 @Builder(toBuilder = true)
@@ -60,10 +63,19 @@ public class BookModel {
             Optional.ofNullable(cleanTitle(book.getTitle())).map(String::toLowerCase).orElse("");
     }
 
+    public static Stream<String> hashKeysForBook(final BookModel book) {
+        if (book == null) {
+            return Stream.empty();
+        }
+        final String title = Optional.ofNullable(cleanTitle(book.getTitle())).map(String::toLowerCase).orElse("");
+        return book.streamAuthors().map(author -> author.concat("\t").concat(title));
+    }
+
     private Integer audiobookStoreRatings;
     private String audiobookStoreSku;
     private URL audiobookStoreUrl;
     private URL audiobooksDotComUrl;
+    private String authorGoodreadsUrl;
     private String authorName;
     private String breakup;
     private LocalDate datePublish;
@@ -120,6 +132,10 @@ public class BookModel {
         return duration.toHoursPart() + ":" + (minutes < 10 ? "0" : "") + minutes;
     }
 
+    public String getPublisherDescription() {
+        return unescape(publisherDescription);
+    }
+
     @SuppressWarnings("unused")  // Jackson
     public String getStars() {
         return StringStuff.starsFromNumber(ratings.get(BookRating.Overall));
@@ -151,13 +167,20 @@ public class BookModel {
     }
 
     public void setNarratorName(final String name) {
-        if (name == null) {
+        if (name == null || name.contains("Narrator Info Added Soon")) {
             return;
         }
         if (narratorName != null && narratorName.length() > name.length()) {
             return;
         }
         narratorName = normalizeNames(name);
+    }
+
+    public void setPublisherDescription(final String text) {
+        if (text == null) {
+            return;
+        }
+        publisherDescription = unescape(text.replaceAll("^.+? audiobook, by .+?\\.\\.\\.\\s+", ""));
     }
 
     public void setSeriesName(final String updated) {
@@ -168,15 +191,23 @@ public class BookModel {
             .replaceAll("(?i)\\s+series$", "");
     }
 
+    @JsonIgnore
+    public Stream<String> streamAuthors() {
+        if (authorName == null) {
+            return Stream.empty();
+        }
+        return splitNames(authorName).map(BookStuff::cleanAuthor);
+    }
+
     public String toString() {
         if (title == null && authorName == null) {
             return "<no book>";
         }
-        return (title == null ? "<no title>" : title)
+        return (authorName == null ? "<no author>" : authorName)
             + " "
-            + (datePublish == null ? "by" : "(" + datePublish.getYear() + ")")
+            + (datePublish == null ? "(?)" : "(" + datePublish.getYear() + ")")
             + " "
-            + (authorName == null ? "<no author>" : authorName);
+            + (title == null ? "<no title>" : title);
     }
 
     @Data

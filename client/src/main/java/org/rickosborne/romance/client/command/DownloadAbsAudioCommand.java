@@ -1,20 +1,20 @@
 package org.rickosborne.romance.client.command;
 
-import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.ResponseBody;
 import org.openqa.selenium.Cookie;
 import org.rickosborne.romance.AudiobookStore;
 import org.rickosborne.romance.client.AudiobookStoreSuggestService;
+import org.rickosborne.romance.client.audiobookshelf.AudiobookShelfMetadataJson;
+import org.rickosborne.romance.client.audiobookstore.AbsCredentials;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.client.response.BookInformation;
 import org.rickosborne.romance.client.response.LibraryFileV2;
-import org.rickosborne.romance.db.model.BookAttributes;
 import org.rickosborne.romance.db.model.BookModel;
+import org.rickosborne.romance.util.BidirectionalMultiMap;
 import org.rickosborne.romance.util.BookBot;
 import org.rickosborne.romance.util.IgnoredBooks;
-import org.rickosborne.romance.util.Pair;
 import org.rickosborne.romance.util.SheetStuff;
 import picocli.CommandLine;
 import retrofit2.Response;
@@ -24,30 +24,30 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static org.rickosborne.romance.client.audiobookshelf.AudiobookShelfConverter.metadataFromBook;
 import static org.rickosborne.romance.db.model.BookModel.fileNameForBook;
-import static org.rickosborne.romance.db.model.BookModel.hashKeyForBook;
 import static org.rickosborne.romance.util.BookMerger.bookLikeFilter;
-import static org.rickosborne.romance.util.FileStuff.recursePath;
+import static org.rickosborne.romance.util.FileStuff.scanBookFiles;
+import static org.rickosborne.romance.util.ImageDownloader.downloadImage;
+import static org.rickosborne.romance.util.ImageDownloader.getExtension;
 
 @Slf4j
 @CommandLine.Command(
@@ -55,32 +55,16 @@ import static org.rickosborne.romance.util.FileStuff.recursePath;
     description = "Download books from TABS"
 )
 public class DownloadAbsAudioCommand extends ASheetCommand {
-    private static final Map<String, BookAttributes> FILE_NAME_ATTRIBUTES = Map.of(
-        "author", BookAttributes.authorName,
-        "title", BookAttributes.title,
-        "series", BookAttributes.seriesName
-    );
-    private static final List<Pattern> FILE_NAME_PATTERNS = List.of(
-        Pattern.compile("^(?<author>.+?)\\s+\\(.*?\\)\\s+(?<title>.+?)\\s+(?:part\\s+)?\\d+(?:\\s+of\\s+\\d+)?$"),
-        Pattern.compile("^(?<author>.+?)\\s+\\(.*?\\)\\s+(?<title>.+?)\\s+\\((?<series>.+)\\)$"),
-        Pattern.compile("^(?<author>.+?)\\s+\\(.*?\\)\\s+(?<title>.+?)$")
-    );
-    private final static Pattern MULTI_AUTHOR_PATTERN = Pattern.compile("^(.+?)(?:\\s*,\\s+|\\s+and\\s+)(.+?)$", Pattern.CASE_INSENSITIVE);
-    private static final List<Pattern> TITLE_BLOCKLIST = List.of(
-        Pattern.compile("\\s+\\[File \\d+ of \\d+]")
-    );
     @CommandLine.Option(names = {"--audio-path"}, description = "Path to a directory where audio already exists", required = true)
     private List<File> audioPaths;
-    @CommandLine.Option(names = {"--cookie-header"}, description = "Cookie header", required = false)
     private String cookieHeader;
-    @CommandLine.Option(names = {"--dry-run"}, description = "Do not download anything", required = false)
-    private boolean dryRun = false;
     @CommandLine.Option(names = {"--out-path"}, description = "Path to a directory where audio will be saved", required = true)
     private Path outPath;
     @CommandLine.Option(names = {"--purchased-after"}, description = "Purchased after", required = false)
     private Date purchasedAfter;
-    @CommandLine.Option(names = {"--rvt"}, description = "Request Verification Token", required = true)
     private String requestVerificationToken;
+    @CommandLine.Option(names = {"--temp-path"}, description = "Path for temp files", required = false)
+    private Path tempPath = Path.of(".cache", "download");
     @CommandLine.Option(names = {"--with-sheet"}, description = "Correlate with spreadsheet", required = false)
     private boolean withSheet = false;
 
@@ -92,19 +76,18 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
         if (audioPaths.isEmpty()) {
             throw new IllegalArgumentException("Must have at least one audio path");
         }
+        if (!tempPath.toFile().exists() || !tempPath.toFile().isDirectory()) {
+            throw new IllegalArgumentException("Temp Path does not exist or is not a directory: " + tempPath);
+        }
         if (!outPath.toFile().exists() || !outPath.toFile().isDirectory()) {
             throw new IllegalArgumentException("Out Path does not exist or is not a directory: " + outPath);
         }
-        final Map<String, Pair<BookModel, File>> existing = new HashMap<>();
-        audioPaths.forEach(audioPath -> {
-            log.info("Scanning: {}", audioPath);
-            recursePath(audioPath, file -> extractBook(file, existing), dir -> {
-                extractBook(dir, existing);
-                return true;
-            });
-        });
-        log.info("Found {} existing books", existing.size());
+        final BidirectionalMultiMap<BookModel, File, String> bookFiles = scanBookFiles(audioPaths);
+        log.info("Found {} existing books in {} files/dirs", bookFiles.leftSize(), bookFiles.rightSize());
         final BookBot bot = getBookBot();
+        final AbsCredentials absCredentials = bot.getAuth().getAbsCredentials();
+        this.cookieHeader = Objects.requireNonNull(absCredentials.getCookie(), "TABS Cookie from audiobookstore.json");
+        this.requestVerificationToken = Objects.requireNonNull(absCredentials.getRequestVerificationToken());
         final Predicate<BookInformation> infoPredicate;
         if (purchasedAfter != null) {
             final Instant pAfter = purchasedAfter.toInstant();
@@ -118,8 +101,8 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
         final ArrayList<BookModel> todo = (ArrayList<BookModel>) books.stream()
             .filter(IgnoredBooks::isNotIgnored)
             .filter(book -> {
-                final String hashKey = hashKeyForBook(book);
-                if (existing.containsKey(hashKey)) {
+                final String hashKey = bookFiles.leftKey(book);
+                if (bookFiles.containsLeft(book)) {
                     log.info("Already downloaded: {}", book);
                     return false;
                 }
@@ -162,68 +145,10 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
             log.info("Need to download: {}. {} ({}) {}", i + 1, book, book.getDatePurchase(), book.getAudiobookStoreSku());
             readyToFetch.add(book);
         }
-        if (!dryRun) {
+        if (!isDryRun()) {
             fetchBooksAudio(readyToFetch, bot);
         }
         return 0;
-    }
-
-    protected void extractBook(
-        @NonNull final File file,
-        @NonNull final Map<String, Pair<BookModel, File>> books
-    ) {
-        final String baseName = file.getName().replaceFirst("[.][^. ]+$", "");
-        if (baseName.isEmpty()) {
-            return;
-        }
-        final List<Matcher> matchers = FILE_NAME_PATTERNS.stream().map(pattern -> pattern.matcher(baseName))
-            .filter(Matcher::find).collect(Collectors.toUnmodifiableList());
-        if (matchers.isEmpty()) {
-            // log.warn("Did not match any patterns: {}", baseName);
-            return;
-        }
-        for (final Matcher matcher : matchers) {
-            final BookModel book = BookModel.build();
-            for (final Map.Entry<String, BookAttributes> entry : FILE_NAME_ATTRIBUTES.entrySet()) {
-                if (matcher.pattern().pattern().contains("?<" + entry.getKey() + ">")) {
-                    final Pair<String, BookAttributes> pair = Pair.build(matcher.group(entry.getKey()), entry.getValue());
-                    if (pair.getRight().getAttribute(book) == null) {
-                        final BookAttributes attr = pair.getRight();
-                        final String value = pair.getLeft();
-                        attr.setAttribute(book, value);
-                    }
-                }
-            }
-            String title = book.getTitle();
-            if (title == null || title.isBlank()) {
-                return;
-            }
-            for (final Pattern pattern : TITLE_BLOCKLIST) {
-                title = pattern.matcher(title).replaceAll("").strip();
-            }
-            if (title.isBlank()) {
-                return;
-            }
-            book.setTitle(title);
-            final List<BookModel> toAdd = new LinkedList<>();
-            toAdd.add(book);
-            final Matcher mapMatcher = MULTI_AUTHOR_PATTERN.matcher(book.getAuthorName());
-            if (mapMatcher.find()) {
-                final String a1 = mapMatcher.group(1);
-                final String a2 = mapMatcher.group(2);
-                final BookModel b1 = book.toBuilder().authorName(a1).build();
-                final BookModel b2 = book.toBuilder().authorName(a2).build();
-                toAdd.add(b1);
-                toAdd.add(b2);
-            }
-            log.info("Found {}", book);
-            toAdd.forEach(b -> {
-                final String hashKey = hashKeyForBook(b);
-                if (!books.containsKey(hashKey)) {
-                    books.put(hashKey, Pair.build(b, file));
-                }
-            });
-        }
     }
 
     private void fetchBooksAudio(
@@ -232,7 +157,7 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
     ) {
         while (!todo.isEmpty()) {
             log.info("{} to download", todo.size());
-            final BookModel book = todo.remove(0);
+            final BookModel book = bot.extendAll(todo.remove(0));
             if (cookieHeader == null) {
                 final AudiobookStoreHtml storeHtml = bot.getAudiobookStoreHtml();
                 final AudiobookStoreAuthOptions auth = bot.getAuth();
@@ -244,7 +169,7 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                         .map(c -> c.getName() + "=" + URLEncoder.encode(c.getValue(), StandardCharsets.UTF_8))
                         .collect(Collectors.joining("; "));
                 });
-                log.info("Cookie: " + cookieHeader);
+                log.info("Cookie: {}", cookieHeader);
             }
             final AudiobookStoreSuggestService service = bot.getAudiobookStoreSuggestService();
             try {
@@ -259,12 +184,16 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                     final List<LibraryFileV2> libraryFilesList = libraryFilesResponse.body();
                     if (libraryFilesList != null && !libraryFilesList.isEmpty()) {
                         final int fileCount = libraryFilesList.size();
-                        for (int i = 0; i < fileCount; i++) {
-                            final LibraryFileV2 libraryFile = libraryFilesList.get(i);
-                            final String fileName = fileNameForBook(book) + (fileCount > 1 ? " " + (i + 1) : "") + ".m4b";
+                        boolean gotAny = false;
+                        final String dirName = fileNameForBook(book);
+                        final Path doneDir = outPath.resolve(dirName);
+                        final List<AudiobookShelfMetadataJson.Chapter> chapters = new LinkedList<>();
+                        for (int i = 1; i <= fileCount; i++) {
+                            final LibraryFileV2 libraryFile = libraryFilesList.get(i - 1);
+                            final String fileName = dirName + (fileCount > 1 ? " " + i : "") + ".m4b";
                             log.info("Downloading: {}", fileName);
-                            final File partFile = outPath.resolve(fileName + ".part").toFile();
-                            final File doneFile = outPath.resolve(fileName).toFile();
+                            final File partFile = tempPath.resolve(fileName + ".part").toFile();
+                            final File doneFile = doneDir.resolve(fileName).toFile();
                             if (doneFile.exists()) {
                                 continue;
                             }
@@ -283,14 +212,34 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                                     ) {
                                         in.transferTo(out);
                                     }
-                                    if (!partFile.renameTo(doneFile)) {
-                                        log.warn("Could not rename {} -> {}", partFile, doneFile);
-                                    }
+                                    // BookTags.applyTags(partFile, book, new BookTags.Extras(fileCount, i));
+                                    Files.createDirectories(doneDir);
+                                    Files.move(partFile.toPath(), doneFile.toPath());
+                                    gotAny = true;
                                 } else {
                                     log.error("Download was not successful: {}, {}", download.code(), download.message());
                                 }
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
+                            }
+                        }
+                        if (gotAny) {
+                            final File metadataFile = doneDir.resolve("metadata.json").toFile();
+                            if (!metadataFile.exists()) {
+                                final AudiobookShelfMetadataJson metadata = metadataFromBook(book);
+                                bot.getObjectWriter().writeValue(metadataFile, metadata);
+                            }
+                        }
+                        final URL imageUrl = book.getImageUrl();
+                        if (imageUrl != null) {
+                            final String ext = getExtension(imageUrl);
+                            if (ext != null && !ext.isBlank()) {
+                                final String coverFileName = "cover." + ext;
+                                final File artFile = doneDir.resolve(coverFileName).toFile();
+                                if (!artFile.exists()) {
+                                    log.info("Downloading art: {}", imageUrl);
+                                    downloadImage(imageUrl, artFile);
+                                }
                             }
                         }
                     } else {

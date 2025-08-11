@@ -1,6 +1,7 @@
 package org.rickosborne.romance.util;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.model.Spreadsheet;
 import lombok.AccessLevel;
@@ -15,6 +16,9 @@ import org.rickosborne.romance.client.AudiobookStoreSuggestService;
 import org.rickosborne.romance.client.CacheClient;
 import org.rickosborne.romance.client.GoodreadsService;
 import org.rickosborne.romance.client.JsonCookieStore;
+import org.rickosborne.romance.client.audiobookshelf.AudiobookShelfAuthOptions;
+import org.rickosborne.romance.client.audiobookshelf.AudiobookShelfConfig;
+import org.rickosborne.romance.client.audiobookshelf.AudiobookShelfService;
 import org.rickosborne.romance.client.command.AudiobookStoreAuthOptions;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.client.html.BellaHtml;
@@ -22,8 +26,10 @@ import org.rickosborne.romance.client.html.GoodreadsHtml;
 import org.rickosborne.romance.client.html.StoryGraphHtml;
 import org.rickosborne.romance.client.response.BookInformation;
 import org.rickosborne.romance.client.response.UserInformation2;
+import org.rickosborne.romance.db.DbJsonWriter;
 import org.rickosborne.romance.db.json.JsonStore;
 import org.rickosborne.romance.db.json.JsonStoreFactory;
+import org.rickosborne.romance.db.model.AuthorModel;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.model.BookSchema;
 import org.rickosborne.romance.db.sheet.SheetStoreFactory;
@@ -36,11 +42,13 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import static org.rickosborne.romance.util.AuthorMerger.bookWithAuthorLikeFilter;
 import static org.rickosborne.romance.util.BookMerger.bookLikeFilter;
 import static org.rickosborne.romance.util.BookMerger.modelFromBookInformation;
 import static org.rickosborne.romance.util.MainCharRank.compareWithAuthor;
@@ -96,11 +104,21 @@ public class BookBot {
     @Getter(lazy = true)
     private final JsonStoreFactory jsonStoreFactory = buildJsonStoreFactory();
     @Getter(lazy = true)
+    private final JsonStore<AuthorModel> authorStore = getJsonStoreFactory().buildJsonStore(AuthorModel.class);
+    @Getter(lazy = true)
     private final JsonStore<BookModel> bookStore = getJsonStoreFactory().buildJsonStore(BookModel.class);
+    @Getter(lazy = true)
+    private final ObjectWriter objectWriter = DbJsonWriter.getJsonWriter();
     @Getter(value = AccessLevel.PROTECTED, lazy = true)
     private final JsonCookieStore sgCookieStore = buildStoryGraphCookieStore();
     @Getter(lazy = true)
     private final SheetStoreFactory sheetStoreFactory = buildSheetStoreFactory();
+    @CommandLine.Mixin
+    private final AudiobookShelfAuthOptions shelfAuthOptions;
+    @Getter(lazy = true)
+    private final AudiobookShelfConfig shelfConfig = getShelfAuthOptions().toConfig();
+    @Getter(lazy = true)
+    private final AudiobookShelfService shelfService = AudiobookShelfService.build(getShelfConfig());
     @Getter(lazy = true)
     private final Sheets.Spreadsheets spreadsheets = BooksSheets.getSpreadsheets(getGoogleUserId());
     @Getter(lazy = true)
@@ -126,6 +144,43 @@ public class BookBot {
         return new StoryGraphHtml(getCachePath(), getSgCookieStore());
     }
 
+    public AuthorModel extendAll(@NonNull final AuthorModel original, final List<BookModel> books) {
+        final AuthorModel stored = getAuthorStore().findLike(original);
+        URL grUrl = original.getGoodreadsUrl();
+        AuthorModel merged = AuthorMerger.merge(original, stored);
+        if (grUrl == null) {
+            final List<BookModel> authorBooks;
+            authorBooks = Objects.requireNonNullElseGet(books, () -> getBookStore().stream()
+                .filter(bookWithAuthorLikeFilter(original))
+                .collect(Collectors.toList()));
+            final GoodreadsService grService = getGoodreadsService();
+            for (final BookModel authorBook : authorBooks) {
+                URL bookUrl = authorBook.getGoodreadsUrl();
+                if (bookUrl == null) {
+                    final BookModel found = grService.findBook(authorBook.getTitle(), original.getName());
+                    if (found != null) {
+                        bookUrl = found.getGoodreadsUrl();
+                    }
+                }
+                if (bookUrl != null) {
+                    final BookModel grBook = getGoodreadsHtml().getBookModel(bookUrl);
+                    if (grBook.getAuthorGoodreadsUrl() != null) {
+                        grUrl = StringStuff.urlFromString(grBook.getAuthorGoodreadsUrl());
+                        break;
+                    }
+                }
+            }
+        }
+        if (grUrl != null) {
+            final GoodreadsHtml goodreadsHtml = getGoodreadsHtml();
+            final AuthorModel fromGR = goodreadsHtml.getAuthorModel(grUrl);
+            if (fromGR != null) {
+                merged = AuthorMerger.merge(merged, fromGR);
+            }
+        }
+        return merged;
+    }
+
     public BookModel extendAll(
         @NonNull final BookModel original
     ) {
@@ -137,7 +192,20 @@ public class BookBot {
         model = extendWithAudiobookStoreDetails(model);
         model = extendWithGoodReadsAutoComplete(model);
         model = extendWithGoodReadsDetails(model);
-        model = extendWithStoryGraphSearch(model);
+        if (model.getDatePublish() == null && model.getAudiobookStoreUrl() == null && model.getAuthorName() != null) {
+            AuthorModel authorLike = AuthorModel.builder().name(model.getAuthorName()).build();
+            authorLike = AuthorMerger.merge(authorLike, getAuthorStore().findLike(authorLike));
+            authorLike = AuthorMerger.merge(authorLike, getAudiobookStoreSuggestService().findAuthorLike(model.getAuthorName()));
+            final List<BookModel> authorBooks = getAudiobookStoreHtml().getBooksForAuthor(authorLike);
+            final List<BookModel> maybeMatches = authorBooks.stream()
+                .filter(bookLikeFilter(original))
+                .collect(Collectors.toList());
+            if (maybeMatches.size() == 1) {
+                model = mergeBooks(model, extendWithAudiobookStoreDetails(maybeMatches.get(0)));
+                getAuthorStore().saveIfChanged(authorLike);
+            }
+        }
+        // model = extendWithStoryGraphSearch(model);
         if (getBookStore().idFromModel(model) != null) {
             getBookStore().saveIfChanged(model);
         }
@@ -256,8 +324,8 @@ public class BookBot {
             return original;
         }
         try {
-            log.info("Summarizing: " + original.getTitle() + " by " + original.getAuthorName());
-            log.info("Blurb: " + description);
+            log.info("Summarizing: {} by {}", original.getTitle(), original.getAuthorName());
+            log.info("Blurb: {}", description);
             final LanguageParser.Summary summary = getLanguageParser().summarize(description);
             final String location = summary.getLocation();
             if (location != null && original.getLocation() == null) {
@@ -276,7 +344,7 @@ public class BookBot {
                 if (storedMC != null) {
                     storedMC.importFromIfNotNull(summaryChar);
                 } else {
-                    log.warn("Dropped MC: " + summaryChar);
+                    log.warn("Dropped MC: {}", summaryChar);
                 }
             }
         } catch (Throwable e) {
@@ -316,7 +384,7 @@ public class BookBot {
                 return Collections.emptyList();
             }
         } catch (IOException e) {
-            log.warn("Could not fetch TABS user info");
+            log.warn("Could not fetch TABS user info: {}", e.getMessage());
             return Collections.emptyList();
         }
         return info.getAudiobooks().stream()

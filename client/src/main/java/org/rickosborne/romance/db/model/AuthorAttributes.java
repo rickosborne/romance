@@ -11,9 +11,11 @@ import java.util.function.Function;
 @Getter
 public enum AuthorAttributes implements EnumSchemaAttribute<AuthorModel> {
     audiobookStoreUrl(AuthorModel::getAudiobookStoreUrl, AuthorModel::setAudiobookStoreUrl, URL.class),
+    bioHtml(AuthorModel::getBioHtml, AuthorModel::setBioHtml, String.class),
     dnfCount(AuthorModel::getDnfCount, AuthorModel::setDnfCount, Integer.class),
     fiveStarCount(AuthorModel::getFiveStarCount, AuthorModel::setFiveStarCount, Integer.class),
     fourStarPlusCount(AuthorModel::getFourStarPlusCount, AuthorModel::setFourStarPlusCount, Integer.class),
+    goodreadsId(AuthorModel::getGoodreadsId, AuthorModel::setGoodreadsId, String.class),
     goodreadsUrl(AuthorModel::getGoodreadsUrl, AuthorModel::setGoodreadsUrl, URL.class),
     mastodonHandle(AuthorModel::getMastodonHandle, AuthorModel::setMastodonHandle, String.class),
     maxRating(AuthorModel::getMaxRating, AuthorModel::setMaxRating, Double.class),
@@ -23,6 +25,7 @@ public enum AuthorAttributes implements EnumSchemaAttribute<AuthorModel> {
     name(AuthorModel::getName, AuthorModel::setName, String.class),
     odds4(AuthorModel::getOdds4, AuthorModel::setOdds4, Double.class),
     ownedCount(AuthorModel::getOwnedCount, AuthorModel::setOwnedCount, Integer.class),
+    picUrl(AuthorModel::getPicUrl, AuthorModel::setPicUrl, URL.class),
     pronouns(AuthorModel::getPronouns, AuthorModel::setPronouns, String.class),
     queer(AuthorModel::getQueer, AuthorModel::setQueer, YesNoUnknown.class),
     ratedCount(AuthorModel::getRatedCount, AuthorModel::setRatedCount, Integer.class),

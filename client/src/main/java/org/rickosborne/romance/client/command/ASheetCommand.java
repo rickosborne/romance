@@ -18,6 +18,8 @@ import lombok.Value;
 import org.rickosborne.romance.BooksSheets;
 import org.rickosborne.romance.NamingConvention;
 import org.rickosborne.romance.client.JsonCookieStore;
+import org.rickosborne.romance.client.audiobookshelf.AudiobookShelfAuthOptions;
+import org.rickosborne.romance.client.audiobookshelf.AudiobookShelfConfig;
 import org.rickosborne.romance.client.google.Google;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.client.html.AudiobooksDotComHtml;
@@ -74,6 +76,9 @@ public abstract class ASheetCommand implements Callable<Integer> {
     @Getter(value = AccessLevel.PROTECTED)
     @CommandLine.Option(names = {"--path", "-p"}, description = "Path to DB dir", defaultValue = "book-data")
     private Path dbPath;
+    @Getter(value = AccessLevel.PROTECTED)
+    @CommandLine.Option(names = {"--dry-run"}, description = "Do not download anything", required = false)
+    private boolean dryRun = false;
     @Getter(value = AccessLevel.PROTECTED, lazy = true)
     private final JsonCookieStore jsonCookieStore = Once.supply(() -> {
         final Path cookieStorePath = getCookieStorePath();
@@ -89,6 +94,11 @@ public abstract class ASheetCommand implements Callable<Integer> {
     @Getter(value = AccessLevel.PROTECTED)
     @CommandLine.Mixin
     private StoryGraphAuthOptions sgAuth;
+    @Getter
+    @CommandLine.Mixin
+    private AudiobookShelfAuthOptions shelfAuthOptions;
+    @Getter(lazy = true)
+    private final AudiobookShelfConfig shelfConfig = getShelfAuthOptions().toConfig();
     @Getter(lazy = true)
     private final JsonCookieStore storyGraphCookies = JsonCookieStore.fromPath(Path.of("./.credentials/storygraph-cookies.json"));
     @Getter(lazy = true)
@@ -112,7 +122,7 @@ public abstract class ASheetCommand implements Callable<Integer> {
     private boolean write = false;
 
     private BookBot buildBookBot() {
-        return new BookBot(getTabsAuth(), getCachePath(), getCookieStorePath(), getDbPath(), getUserId());
+        return new BookBot(getTabsAuth(), getCachePath(), getCookieStorePath(), getDbPath(), getUserId(), getShelfAuthOptions());
     }
 
     private JsonStoreFactory buildJsonStoreFactory() {

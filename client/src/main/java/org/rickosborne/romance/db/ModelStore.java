@@ -59,14 +59,20 @@ public interface ModelStore<M> {
     M save(final M model);
 
     default M saveIfChanged(final M model) {
+        return this.saveIfChanged(model, true);
+    }
+
+    default M saveIfChanged(final M model, final boolean doLog) {
         final Diff<M> diff = diffFromCache(model);
         if (diff.hasChanged()) {
             final String id = idFromModel(model);
             if (id == null) {
                 throw new NullPointerException("No id: " + model);
             }
-            System.out.println("~~~ " + getDbModel().getTypeName() + "/" + id);
-            System.out.println(diff.asDiffLines());
+            if (doLog) {
+                System.out.println("~~~ " + getDbModel().getTypeName() + "/" + id);
+                System.out.println(diff.asDiffLines());
+            }
             return save(model);
         }
         return model;

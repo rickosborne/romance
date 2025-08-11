@@ -31,7 +31,7 @@ public class DataFromAudiobookStoreCommand implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
-        final BookBot bookBot = new BookBot(auth, cachePath, null, dbPath, null);
+        final BookBot bookBot = new BookBot(auth, cachePath, null, dbPath, null, null);
         for (final BookModel fetched : bookBot.fetchAudiobooks()) {
             bookBot.extendAll(fetched);
         }

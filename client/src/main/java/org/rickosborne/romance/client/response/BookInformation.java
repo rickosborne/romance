@@ -1,6 +1,5 @@
 package org.rickosborne.romance.client.response;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -8,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.rickosborne.romance.util.BookStuff;
 
@@ -15,12 +15,39 @@ import java.net.URL;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
+
+import static org.rickosborne.romance.util.BookStuff.cleanAuthor;
+import static org.rickosborne.romance.util.BookStuff.cleanTitle;
+import static org.rickosborne.romance.util.StringStuff.splitNames;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Builder(toBuilder = true)
-@AllArgsConstructor(onConstructor = @__(@JsonCreator))
+@NoArgsConstructor
+@AllArgsConstructor
 public class BookInformation {
+    public static String hashKeyForBookInformation(final BookInformation info) {
+        if (info == null) {
+            return null;
+        }
+        final String title = cleanTitle(info.getTitle());
+        final String author = cleanAuthor(info.getAuthors());
+        if (title == null || author == null) {
+            return null;
+        }
+        return author.toLowerCase().concat("\t").concat(title.toLowerCase());
+    }
+
+    public static Stream<String> hashKeysForBookInformation(final BookInformation info) {
+        if (info == null) {
+            return Stream.empty();
+        }
+        final String title = Optional.ofNullable(cleanTitle(info.getTitle())).map(String::toLowerCase).orElse("");
+        return info.streamAuthors()
+            .map(author -> author.toLowerCase().concat("\t").concat(title));
+    }
+
     @JsonProperty("AudioFiles")
     @ToString.Exclude
     List<BookFile> audioFiles;
@@ -82,6 +109,14 @@ public class BookInformation {
             return null;
         }
         return Math.round(runtime / 36d) / 100d;
+    }
+
+    @JsonIgnore
+    public Stream<String> streamAuthors() {
+        if (authors == null) {
+            return Stream.empty();
+        }
+        return splitNames(authors).map(BookStuff::cleanAuthor);
     }
 
     @Override

@@ -2,10 +2,10 @@ package org.rickosborne.romance.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.rickosborne.romance.Goodreads;
-import org.rickosborne.romance.util.BookMerger;
 import org.rickosborne.romance.client.response.GoodreadsAuthor;
 import org.rickosborne.romance.client.response.GoodreadsAutoComplete;
 import org.rickosborne.romance.db.model.BookModel;
+import org.rickosborne.romance.util.BookMerger;
 import org.slf4j.LoggerFactory;
 import retrofit2.Call;
 import retrofit2.Retrofit;
@@ -54,7 +54,7 @@ public interface GoodreadsService {
         final String query = lcTitle + " " + lcAuthor;
         final List<GoodreadsAutoComplete> completes = buildCaching().fetchFomCache(new TypeReference<>() {
         }, s -> {
-            LoggerFactory.getLogger(getClass()).info("Fetching GR autocomplete for: " + query);
+            LoggerFactory.getLogger(getClass()).info("Fetching GR autocomplete for: {}", query);
             return s.autoComplete(query);
         }, query);
         if (completes == null || completes.isEmpty()) {
