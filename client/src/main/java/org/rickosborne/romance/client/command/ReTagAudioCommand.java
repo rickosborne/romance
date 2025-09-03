@@ -1,28 +1,27 @@
 package org.rickosborne.romance.client.command;
 
 import lombok.extern.slf4j.Slf4j;
-import org.rickosborne.romance.db.Diff;
 import org.rickosborne.romance.db.SchemaDiff;
 import org.rickosborne.romance.db.json.JsonStore;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.model.BookSchema;
+import org.rickosborne.romance.db.model.BookTags;
 import org.rickosborne.romance.util.BidirectionalMultiMap;
 import org.rickosborne.romance.util.BookBot;
-import org.rickosborne.romance.util.FFMetadata;
-import org.rickosborne.romance.util.FileStuff;
 import picocli.CommandLine;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import static org.rickosborne.romance.util.BookMerger.bookLikeFilter;
-import static org.rickosborne.romance.util.FFMetadata.updateTags;
+import static org.rickosborne.romance.util.FileStuff.coverArtIn;
+import static org.rickosborne.romance.util.FileStuff.extensionForContentType;
 import static org.rickosborne.romance.util.FileStuff.scanBookFiles;
-import static org.rickosborne.romance.util.FileStuff.withoutExtensions;
+import static org.rickosborne.romance.util.ImageDownloader.downloadImage;
 
 @Slf4j
 @CommandLine.Command(
@@ -82,30 +81,16 @@ public class ReTagAudioCommand extends ASheetCommand {
                 //          IllegalArgumentException | InvalidAudioFrameException e) {
                 //     log.warn("Could not read with AudioFile: {} for {}", e.getMessage(), file);
                 // }
-                final FFMetadata ffMetadata = FFMetadata.fromFileJson(file);
-                if (ffMetadata == null) {
-                    log.warn("Could not read with ffprobe: {}", file);
-                } else {
-                    ffMetadata.importFromBook(storeBook, true);
-                    final BookModel ffBook = ffMetadata.asBookModel();
-                    mergedBook = bookSchema.mergeModels(ffBook, mergedBook);
-                    final String ffText = FFMetadata.tagsFileForBook(mergedBook, FileStuff.interpretFileParts(file.getName(), mergedBook));
-                    if (ffText != null) {
-                        final String ffMetadataFileName = withoutExtensions(file.getName()) + ".ffmetadata.txt";
-                        final File ffFile = file.getParentFile().toPath().resolve(ffMetadataFileName).toFile();
-                        try (final FileWriter writer = new FileWriter(ffFile)) {
-                            writer.write(ffText);
-                            log.info("FFMetadata: {}", ffFile);
-                        } catch (IOException e) {
-                            log.error("Could not write: {} :: {}", e.getMessage(), ffFile);
-                        }
-                    }
+                final URL imageUrl = storeBook.getImageUrl();
+                File coverFile = coverArtIn(file.getParentFile().toPath());
+                if (imageUrl != null && coverFile == null) {
+                    log.info("Downloading art: {}", imageUrl);
+                    coverFile = downloadImage(imageUrl, (contentType) -> {
+                        final String ext = Optional.ofNullable(extensionForContentType(contentType)).orElse(".bin");
+                        return file.getParentFile().toPath().resolve("cover" + ext).toFile();
+                    });
                 }
-                final Diff<BookModel> diff = schemaDiff.diffModels(storeBook, mergedBook);
-                if (diff.hasChanged()) {
-                    log.info("Diff: {}\n{}", mergedBook, diff.asDiffLines());
-                    updateTags(file, tempPath.toAbsolutePath(), mergedBook, files.size());
-                }
+                BookTags.applyFFTags(file, storeBook, tempPath, files.size(), coverFile);
             }
         }
         return 0;

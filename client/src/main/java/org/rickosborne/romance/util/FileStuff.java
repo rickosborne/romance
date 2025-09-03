@@ -11,6 +11,7 @@ import org.rickosborne.romance.db.model.BookModel;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
@@ -32,13 +33,20 @@ import static org.rickosborne.romance.db.model.BookModel.hashKeyForBook;
 
 @Slf4j
 public class FileStuff {
+    public static final Map<String, String> CONTENT_TYPE_EXT = Map.of(
+        "image/png", ".png",
+        "image/jpeg", ".jpeg",
+        "image/jpg", ".jpeg",
+        "image/webp", ".webp"
+    );
+    public static final Set<String> COVER_FILES = Set.of("cover.jpeg", "cover.jpg", "cover.png", "cover.webp");
     public static final Map<String, BookAttributes> FILE_NAME_ATTRIBUTES = Map.of(
         "author", BookAttributes.authorName,
         "title", BookAttributes.title,
         "series", BookAttributes.seriesName
     );
     public static final List<Pattern> FILE_NAME_PATTERNS = List.of(
-        Pattern.compile("^(?<author>.+?)\\s+\\(.*?\\)\\s+(?<title>.+?)\\s+(?:part\\s+)?\\d+(?:\\s+of\\s+\\d+)?$"),
+        Pattern.compile("^(?<author>.+?)\\s+\\(.*?\\)\\s+(?<title>.+?)\\s+(?:\\(?part\\s+)?\\d+(?:\\s+of\\s+\\d+\\)?)?$"),
         Pattern.compile("^(?<author>.+?)\\s+\\(.*?\\)\\s+(?<title>.+?)\\s+\\((?<series>.+)\\)$"),
         Pattern.compile("^(?<author>.+?)\\s+\\(.*?\\)\\s+(?<title>.+?)$")
     );
@@ -113,6 +121,25 @@ public class FileStuff {
             });
         }
         return books;
+    }
+
+    public static File coverArtIn(@NonNull final Path path) {
+        for (final String fileName : COVER_FILES) {
+            final File coverFile = path.resolve(fileName).toFile();
+            if (coverFile.exists()) {
+                return coverFile;
+            }
+        }
+        return null;
+    }
+
+    public static String extensionForContentType(@NonNull final String contentType) {
+        for (final String key : CONTENT_TYPE_EXT.keySet()) {
+            if (contentType.contains(key)) {
+                return CONTENT_TYPE_EXT.get(key);
+            }
+        }
+        return null;
     }
 
     public static TrackAndCount interpretFileParts(@NonNull final String fileName, final BookModel book) {

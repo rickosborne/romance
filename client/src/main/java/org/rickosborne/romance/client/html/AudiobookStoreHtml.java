@@ -3,7 +3,6 @@ package org.rickosborne.romance.client.html;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -19,7 +18,6 @@ import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.model.NarratorModel;
 import org.rickosborne.romance.db.model.SeriesModel;
 import org.rickosborne.romance.util.BookStuff;
-import org.rickosborne.romance.util.BrowserStuff;
 import org.rickosborne.romance.util.Hyperlink;
 import org.rickosborne.romance.util.StringStuff;
 import org.rickosborne.romance.util.UrlRank;
@@ -35,7 +33,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.rickosborne.romance.AudiobookStore.DELAY_MS;
@@ -307,15 +304,6 @@ public class AudiobookStoreHtml implements ILinkedData {
             .build());
     }
 
-    public <T> T withBrowser(final Function<WebDriver, T> block) {
-        final WebDriver browser = BrowserStuff.getBrowser();
-        try {
-            return block.apply(browser);
-        } finally {
-            browser.quit();
-        }
-    }
-
     @Getter
     @RequiredArgsConstructor
     enum AuthorModelHtml implements HtmlData<AuthorModel> {
@@ -393,11 +381,7 @@ public class AudiobookStoreHtml implements ILinkedData {
         private final BiConsumer<BookModel, String> setter;
     }
 
-    @Value
-    public static class BookDetails {
-        List<AuthorModel> authors;
-        BookModel book;
-        List<NarratorModel> narrators;
-        SeriesModel series;
+    public record BookDetails(List<AuthorModel> authors, BookModel book, List<NarratorModel> narrators,
+                              SeriesModel series) {
     }
 }

@@ -12,11 +12,12 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 public abstract class ACLIRunner {
     protected static String runCLI(final File cwd, final String... args) {
-        final Process probe;
+        final Process process;
         try {
-            probe = new ProcessBuilder(args)
+            process = new ProcessBuilder(args)
                 .directory(cwd)
                 .start();
+            log.info("exec: {}", process.info());
         } catch (IOException e) {
             log.error("Failed to start: {}", String.join(" ", args));
             return null;
@@ -24,7 +25,7 @@ public abstract class ACLIRunner {
         final StringWriter outWriter = new StringWriter();
         final StringWriter errorWriter = new StringWriter();
         try (
-            final InputStream probeOut = probe.getInputStream();
+            final InputStream probeOut = process.getInputStream();
             final InputStreamReader reader = new InputStreamReader(probeOut, StandardCharsets.UTF_8)
         ) {
             reader.transferTo(outWriter);
@@ -33,7 +34,7 @@ public abstract class ACLIRunner {
             return null;
         }
         try (
-            final InputStream errorStream = probe.getErrorStream();
+            final InputStream errorStream = process.getErrorStream();
             final InputStreamReader errorReader = new InputStreamReader(errorStream, StandardCharsets.UTF_8)
         ) {
             errorReader.transferTo(errorWriter);
@@ -45,7 +46,7 @@ public abstract class ACLIRunner {
         final String stdErr = errorWriter.toString();
         int exitCode = 1;
         try {
-            exitCode = probe.waitFor();
+            exitCode = process.waitFor();
         } catch (InterruptedException e) {
             log.error("Failed to wait: {}", String.join(" ", args));
         }

@@ -12,8 +12,10 @@ import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.client.response.BookInformation;
 import org.rickosborne.romance.client.response.LibraryFileV2;
 import org.rickosborne.romance.db.model.BookModel;
+import org.rickosborne.romance.db.model.BookTags;
 import org.rickosborne.romance.util.BidirectionalMultiMap;
 import org.rickosborne.romance.util.BookBot;
+import org.rickosborne.romance.util.BrowserStuff;
 import org.rickosborne.romance.util.IgnoredBooks;
 import org.rickosborne.romance.util.SheetStuff;
 import picocli.CommandLine;
@@ -37,6 +39,7 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Predicate;
@@ -45,9 +48,10 @@ import java.util.stream.Collectors;
 import static org.rickosborne.romance.client.audiobookshelf.AudiobookShelfConverter.metadataFromBook;
 import static org.rickosborne.romance.db.model.BookModel.fileNameForBook;
 import static org.rickosborne.romance.util.BookMerger.bookLikeFilter;
+import static org.rickosborne.romance.util.FileStuff.coverArtIn;
+import static org.rickosborne.romance.util.FileStuff.extensionForContentType;
 import static org.rickosborne.romance.util.FileStuff.scanBookFiles;
 import static org.rickosborne.romance.util.ImageDownloader.downloadImage;
-import static org.rickosborne.romance.util.ImageDownloader.getExtension;
 
 @Slf4j
 @CommandLine.Command(
@@ -98,7 +102,7 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
         final List<Predicate<BookModel>> ignoredDownloads = IgnoredBooks.getIgnoredDownloads();
         final List<BookModel> books = bot.fetchAudiobooksWithInfoFilter(infoPredicate);
         final Set<String> seen = new ConcurrentSkipListSet<>();
-        final ArrayList<BookModel> todo = (ArrayList<BookModel>) books.stream()
+        final ArrayList<BookModel> todo = books.stream()
             .filter(IgnoredBooks::isNotIgnored)
             .filter(book -> {
                 final String hashKey = bookFiles.leftKey(book);
@@ -117,7 +121,7 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                 return true;
             })
             .sorted(Comparator.comparing(BookModel::getDatePurchase))
-            .collect(Collectors.toList());
+            .collect(Collectors.toCollection(ArrayList::new));
         if (todo.isEmpty()) {
             log.info("Nothing to do.");
             return 0;
@@ -126,7 +130,7 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
             .buildSheetStore(BookModel.class)
             .getRecords().stream()
             .map(SheetStuff.Indexed::getModel)
-            .collect(Collectors.toUnmodifiableList()) : null;
+            .toList() : null;
         final ArrayList<BookModel> readyToFetch = new ArrayList<>(todo.size());
         for (int i = 0; i < todo.size(); i++) {
             BookModel book = todo.get(i);
@@ -157,11 +161,11 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
     ) {
         while (!todo.isEmpty()) {
             log.info("{} to download", todo.size());
-            final BookModel book = bot.extendAll(todo.remove(0));
+            final BookModel book = bot.extendAll(todo.removeFirst());
             if (cookieHeader == null) {
                 final AudiobookStoreHtml storeHtml = bot.getAudiobookStoreHtml();
                 final AudiobookStoreAuthOptions auth = bot.getAuth();
-                cookieHeader = storeHtml.withBrowser(browser -> {
+                cookieHeader = BrowserStuff.withBrowser(browser -> {
                     storeHtml.headlessSignIn(browser, auth.getAbsUsername(), auth.getAbsPassword());
                     final Set<Cookie> cookies = browser.manage().getCookies();
                     return cookies.stream()
@@ -188,11 +192,27 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                         final String dirName = fileNameForBook(book);
                         final Path doneDir = outPath.resolve(dirName);
                         final List<AudiobookShelfMetadataJson.Chapter> chapters = new LinkedList<>();
+                        final URL imageUrl = book.getImageUrl();
+                        File coverFile = coverArtIn(doneDir);
+                        if (imageUrl != null && coverFile == null) {
+                            log.info("Downloading art: {}", imageUrl);
+                            coverFile = downloadImage(imageUrl, (contentType) -> {
+                                final String ext = Optional.ofNullable(extensionForContentType(contentType)).orElse(".bin");
+                                try {
+                                    Files.createDirectories(doneDir);
+                                } catch (IOException e) {
+                                    log.error("Could not download art: [{}] {}", e.getClass().getSimpleName(), e.getMessage());
+                                }
+                                return doneDir.resolve("cover" + ext).toFile();
+                            });
+                        }
                         for (int i = 1; i <= fileCount; i++) {
                             final LibraryFileV2 libraryFile = libraryFilesList.get(i - 1);
-                            final String fileName = dirName + (fileCount > 1 ? " " + i : "") + ".m4b";
+                            final String partSuffix = fileCount > 1 ? " (part " + i + " of " + fileCount + ")" : "";
+                            final String fileName = dirName + partSuffix + ".m4b";
+                            final String partFileName = dirName + partSuffix + ".partial.m4b";
                             log.info("Downloading: {}", fileName);
-                            final File partFile = tempPath.resolve(fileName + ".part").toFile();
+                            final File partFile = tempPath.resolve(partFileName).toFile();
                             final File doneFile = doneDir.resolve(fileName).toFile();
                             if (doneFile.exists()) {
                                 continue;
@@ -212,9 +232,13 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                                     ) {
                                         in.transferTo(out);
                                     }
+                                    final File ffFile = BookTags.applyFFTags(partFile, book, tempPath, fileCount, coverFile);
                                     // BookTags.applyTags(partFile, book, new BookTags.Extras(fileCount, i));
                                     Files.createDirectories(doneDir);
                                     Files.move(partFile.toPath(), doneFile.toPath());
+                                    if (ffFile != null) {
+                                        Files.move(ffFile.toPath(), doneDir.resolve(ffFile.getName()));
+                                    }
                                     gotAny = true;
                                 } else {
                                     log.error("Download was not successful: {}, {}", download.code(), download.message());
@@ -228,18 +252,6 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                             if (!metadataFile.exists()) {
                                 final AudiobookShelfMetadataJson metadata = metadataFromBook(book);
                                 bot.getObjectWriter().writeValue(metadataFile, metadata);
-                            }
-                        }
-                        final URL imageUrl = book.getImageUrl();
-                        if (imageUrl != null) {
-                            final String ext = getExtension(imageUrl);
-                            if (ext != null && !ext.isBlank()) {
-                                final String coverFileName = "cover." + ext;
-                                final File artFile = doneDir.resolve(coverFileName).toFile();
-                                if (!artFile.exists()) {
-                                    log.info("Downloading art: {}", imageUrl);
-                                    downloadImage(imageUrl, artFile);
-                                }
                             }
                         }
                     } else {

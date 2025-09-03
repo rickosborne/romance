@@ -1,5 +1,6 @@
 package org.rickosborne.romance.client;
 
+import okhttp3.OkHttpClient;
 import org.rickosborne.romance.AudiobookStore;
 import org.rickosborne.romance.client.response.BookInformation;
 import org.rickosborne.romance.client.response.Bookmark;
@@ -13,6 +14,7 @@ import retrofit2.http.GET;
 import retrofit2.http.Query;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 
 import static org.rickosborne.romance.AudiobookStore.API_PATH;
@@ -32,6 +34,9 @@ public interface AudiobookStoreService {
         return new Retrofit.Builder()
             .baseUrl(AudiobookStore.API_BASE)
             .addConverterFactory(JacksonConverterFactory.create())
+            .client(new OkHttpClient.Builder()
+                .readTimeout(Duration.ofSeconds(120))
+                .build())
             .build()
             .create(AudiobookStoreService.class);
     }

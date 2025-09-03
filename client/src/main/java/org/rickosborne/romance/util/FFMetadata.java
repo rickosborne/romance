@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,7 +86,10 @@ public class FFMetadata extends ACLIRunner {
         if (!file.exists() || !file.isFile()) {
             return null;
         }
-        final String text = runCLI(file.getParentFile(), "ffprobe", "-hide_banner", "-show_streams", "-show_format", "-show_chapters", "-show_programs", "-print_format", "json", "-i", file.toString());
+        final String text = runCLI(file.getAbsoluteFile().getParentFile(), "ffprobe", "-hide_banner", "-show_streams", "-show_format", "-show_chapters", "-show_programs", "-print_format", "json", "-i", file.getAbsoluteFile().toString());
+        if (text == null) {
+            return null;
+        }
         try {
             return new ObjectMapper().readerFor(FFMetadata.class).readValue(text);
         } catch (JsonProcessingException e) {
@@ -99,7 +103,7 @@ public class FFMetadata extends ACLIRunner {
         if (!file.exists() || !file.isFile()) {
             return null;
         }
-        return runCLI(file.getParentFile(), "ffprobe", "-hide_banner", "-show_streams", "-show_format", "-show_chapters", "-show_programs", "-i", file.toString());
+        return runCLI(file.getAbsoluteFile().getParentFile(), "ffprobe", "-hide_banner", "-show_streams", "-show_format", "-show_chapters", "-show_programs", "-i", file.getAbsoluteFile().toString());
     }
 
     public static String tagsFileForBook(final BookModel bookModel, final FileStuff.TrackAndCount trackAndCount) {
@@ -128,7 +132,7 @@ public class FFMetadata extends ACLIRunner {
         return sb.toString();
     }
 
-    public static void updateTags(@NonNull final File file, @NonNull final Path tempPath, final BookModel book, final int fileCount) {
+    public static void updateTags(@NonNull final File file, @NonNull final Path tempPath, final BookModel book, final int fileCount, final File coverFile) {
         if (book == null) {
             return;
         }
@@ -154,10 +158,21 @@ public class FFMetadata extends ACLIRunner {
         final String tempName = "~" + fileName;
         final File tempFile = tempPath.resolve(tempName).toFile();
         log.info("Importing ffmetadata: {}", book);
-        final String out = runCLI(tempPath.toFile(), "ffmpeg", "-i", file.toString(), "-i", ffFile.toString(), "-c", "copy", "-movflags", "use_metadata_tags", "-map_metadata", "1", tempFile.toString());
+        final ArrayList<String> args = new ArrayList<>(List.of("ffmpeg", "-hide_banner", "-i", file.getAbsoluteFile().toString(), "-i", ffFile.getAbsoluteFile().toString()));
+        if (coverFile != null) {
+            args.addAll(List.of("-i", coverFile.getAbsoluteFile().toString()));
+        }
+        args.addAll(List.of("-map", "0:a", "-c:0", "copy"));
+        if (coverFile != null) {
+            args.addAll(List.of("-map", "2:v", "-c:v", "mjpeg", "-disposition:v", "attached_pic"));
+        }
+        args.addAll(List.of("-movflags", "use_metadata_tags", "-map_metadata", "1", tempFile.getAbsoluteFile().toString()));
+        final String out = runCLI(tempPath.toAbsolutePath().toFile(), args.toArray(String[]::new));
         if (out == null) {
             log.warn("ffmpeg failed: {}", file);
             return;
+        } else {
+            System.out.print(out);
         }
         log.info("Verifying metadata: {}", tempFile);
         final FFMetadata saved = fromFileJson(tempFile);

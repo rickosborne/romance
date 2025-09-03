@@ -9,6 +9,7 @@ import org.rickosborne.romance.db.json.JsonStore;
 import org.rickosborne.romance.db.json.JsonStoreFactory;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.model.BookSchema;
+import org.rickosborne.romance.util.BrowserStuff;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
@@ -53,7 +54,7 @@ public class PreordersCommand implements Callable<Integer> {
         Objects.requireNonNull(absPassword, "TABS password is required");
         final JsonCookieStore cookieStore = JsonCookieStore.fromPath(cookieStorePath);
         final AudiobookStoreHtml storeHtml = new AudiobookStoreHtml(cachePath, cookieStore);
-        final List<BookModel> preorders = storeHtml.withBrowser(browser -> {
+        final List<BookModel> preorders = BrowserStuff.withBrowser(browser -> {
             storeHtml.headlessSignIn(browser, absUsername, absPassword);
             return storeHtml.getPreorders(browser);
         });

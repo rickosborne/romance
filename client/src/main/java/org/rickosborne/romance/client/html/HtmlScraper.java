@@ -15,6 +15,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.rickosborne.romance.StoryGraph;
 import org.rickosborne.romance.client.JsonCookieStore;
+import org.rickosborne.romance.util.BrowserStuff;
 import org.rickosborne.romance.util.StringStuff;
 
 import java.io.File;
@@ -29,7 +30,6 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -37,6 +37,7 @@ import java.util.function.Predicate;
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class HtmlScraper {
+    public static final String FIREFOX_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0";
     public static final String HTML_FILE_EXTENSION = ".html";
     public static final int TIMEOUT_MS = 9000;
     private static final Map<String, LocalDateTime> waitUntil = new ConcurrentHashMap<>();
@@ -156,6 +157,7 @@ public class HtmlScraper {
                 .data(requestExtras.getRequestBodyData())
                 .followRedirects(false)
                 .cookies(requestExtras.getCookies())
+                .userAgent(FIREFOX_UA)
                 .post();
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -182,11 +184,21 @@ public class HtmlScraper {
             }
             final String scrapeUrl = scrape.url.toString();
             Fetched.log.info(scrapeUrl);
-            final Document liveDoc = Jsoup.connect(scrapeUrl)
-                .cookieStore(scrape.cookieStore)
-                .headers(Optional.ofNullable(scrape.headers).orElseGet(Collections::emptyMap))
-                .timeout(TIMEOUT_MS)
-                .get();
+            final Document liveDoc = BrowserStuff.withBrowser(browser -> {
+                browser.navigate().to(scrapeUrl);
+                final String html = browser.getPageSource();
+                return html == null ? null : Jsoup.parse(html);
+            });
+            if (liveDoc == null) {
+                return null;
+            }
+            // final Document liveDoc = Jsoup.connect(scrapeUrl)
+            //     .cookieStore(scrape.cookieStore)
+            //     .headers(Optional.ofNullable(scrape.headers).orElseGet(Collections::emptyMap))
+            //     .timeout(TIMEOUT_MS)
+            //     .userAgent(FIREFOX_UA)
+            //     .referrer(scrapeUrl)
+            //     .get();
             if (scrape.cachePath != null) {
                 final String fileName = StringStuff.cacheName(scrape.url) + HTML_FILE_EXTENSION;
                 try (final FileWriter fw = new FileWriter(scrape.cachePath.resolve(fileName).toFile())) {
@@ -194,7 +206,11 @@ public class HtmlScraper {
                 }
             }
             return new HtmlScraper(scrape.cachePath, scrape.cookieStore, liveDoc, scrape.url);
-        } catch (SocketTimeoutException | HttpStatusException e) {
+        } catch (SocketTimeoutException e) {
+            log.error("Timeout: {}", scrape.url);
+            return new HtmlScraper(scrape.cachePath, scrape.cookieStore, null, scrape.url);
+        } catch (HttpStatusException e) {
+            log.error("Failed: {} {}", e.getStatusCode(), scrape.url);
             return new HtmlScraper(scrape.cachePath, scrape.cookieStore, null, scrape.url);
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);

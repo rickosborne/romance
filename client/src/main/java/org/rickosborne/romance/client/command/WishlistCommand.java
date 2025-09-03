@@ -1,12 +1,12 @@
 package org.rickosborne.romance.client.command;
 
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.client.html.AudiobookStoreHtml;
 import org.rickosborne.romance.db.DbJsonWriter;
 import org.rickosborne.romance.db.model.BookModel;
 import org.rickosborne.romance.db.sheet.SheetStore;
 import org.rickosborne.romance.util.BookBot;
+import org.rickosborne.romance.util.BrowserStuff;
 import org.rickosborne.romance.util.LanguageParser;
 import org.rickosborne.romance.util.SheetStuff;
 import picocli.CommandLine;
@@ -73,7 +73,7 @@ public class WishlistCommand extends ASheetCommand {
             getCachePath().resolve(wishlistCacheFileName).toFile(),
             wishlistCacheExpiry,
             () -> {
-                final List<BookModel> wishlist = storeHtml.withBrowser(browser -> {
+                final List<BookModel> wishlist = BrowserStuff.withBrowser(browser -> {
                     storeHtml.headlessSignIn(browser, absUsername, absPassword);
                     return storeHtml.getWishlist(browser);
                 });
@@ -87,7 +87,7 @@ public class WishlistCommand extends ASheetCommand {
             file -> {
                 try {
                     log.info("Using cached wishlist: " + file);
-                    return DbJsonWriter.getJsonMapper().readValue(file, WishlistCacheFile.class).getWishlist();
+                    return DbJsonWriter.getJsonMapper().readValue(file, WishlistCacheFile.class).wishlist();
                 } catch (IOException e) {
                     throw new RuntimeException("Could not read Wishlist cache file", e);
                 }
@@ -103,8 +103,6 @@ public class WishlistCommand extends ASheetCommand {
         );
     }
 
-    @Value
-    private static class WishlistCacheFile {
-        List<BookModel> wishlist;
+    private record WishlistCacheFile(List<BookModel> wishlist) {
     }
 }

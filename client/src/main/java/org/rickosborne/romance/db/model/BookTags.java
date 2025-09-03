@@ -16,15 +16,24 @@ import org.jaudiotagger.tag.Tag;
 import org.jaudiotagger.tag.TagException;
 import org.jaudiotagger.tag.TagField;
 import org.jaudiotagger.tag.mp4.field.Mp4TagTextField;
+import org.rickosborne.romance.db.Diff;
+import org.rickosborne.romance.db.SchemaDiff;
 import org.rickosborne.romance.util.BookStuff;
+import org.rickosborne.romance.util.FFMetadata;
+import org.rickosborne.romance.util.FileStuff;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+
+import static org.rickosborne.romance.util.FFMetadata.updateTags;
+import static org.rickosborne.romance.util.FileStuff.withoutExtensions;
 
 @Slf4j
 public enum BookTags {
@@ -54,6 +63,37 @@ public enum BookTags {
     year(FieldKey.YEAR, (b) -> Optional.ofNullable(b.getDatePublish()).map((d) -> String.valueOf(d.getYear())).orElse(null)),
     ;
 
+    public static File applyFFTags(@NonNull final File file, @NonNull final BookModel book, @NonNull final Path tempPath, final int fileCount, final File coverFile) {
+        final FFMetadata ffMetadata = FFMetadata.fromFileJson(file.getAbsoluteFile());
+        BookModel mergedBook = book;
+        File resultFile = null;
+        if (ffMetadata == null) {
+            log.warn("Could not read with ffprobe: {}", file);
+        } else {
+            ffMetadata.importFromBook(book, true);
+            final BookModel ffBook = ffMetadata.asBookModel();
+            mergedBook = new BookSchema().mergeModels(ffBook, mergedBook);
+            final String ffText = FFMetadata.tagsFileForBook(mergedBook, FileStuff.interpretFileParts(file.getName(), mergedBook));
+            if (ffText != null) {
+                final String ffMetadataFileName = withoutExtensions(file.getName()) + ".ffmetadata.txt";
+                final File ffFile = file.getParentFile().toPath().resolve(ffMetadataFileName).toFile();
+                try (final FileWriter writer = new FileWriter(ffFile)) {
+                    writer.write(ffText);
+                    log.info("FFMetadata: {}", ffFile);
+                    resultFile = ffFile;
+                } catch (IOException e) {
+                    log.error("Could not write: {} :: {}", e.getMessage(), ffFile);
+                }
+            }
+        }
+        final Diff<BookModel> diff = new SchemaDiff().diffModels(book, mergedBook);
+        if (diff.hasChanged()) {
+            log.info("Diff: {}\n{}", mergedBook, diff.asDiffLines());
+            updateTags(file.getAbsoluteFile(), tempPath.toAbsolutePath(), mergedBook, fileCount, coverFile);
+        }
+        return resultFile;
+    }
+
     public static void applyTags(@NonNull final File file, @NonNull final BookModel book, @NonNull final Extras extras) {
         try {
             final AudioFile audioFile = AudioFileIO.readAs(file, "m4a");
@@ -77,7 +117,7 @@ public enum BookTags {
                         } else {
                             final List<TagField> fields = tag.getFields(bookTag.fieldKey);
                             if (fields.size() == 1) {
-                                final TagField field = fields.get(0);
+                                final TagField field = fields.getFirst();
                                 final String oldValue = field.toString();
                                 if (!field.isBinary() && !Objects.equals(oldValue, value)) {
                                     log.info("  ~ {}: {} => {}", bookTag.fieldKey, oldValue, value);
@@ -95,7 +135,7 @@ public enum BookTags {
                         } else {
                             final List<TagField> fields = tag.getFields(bookTag.fieldName);
                             if (fields.size() == 1) {
-                                final TagField field = fields.get(0);
+                                final TagField field = fields.getFirst();
                                 final String oldValue = field.toString();
                                 if (!field.isBinary() && !Objects.equals(oldValue, value)) {
                                     log.info("  ~ custom {} = {} => {}", bookTag.fieldName, oldValue, value);
@@ -152,6 +192,7 @@ public enum BookTags {
             log.error("Could not read chapters: {}: {}", file, e.getMessage());
         }
     }
+
     @Getter
     private Function<BookModel, String> accessor;
     @Getter
