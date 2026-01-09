@@ -140,7 +140,7 @@ public class JsonStore<M> implements ModelStore<M>, Iterable<M> {
 
     @Override
     public Stream<M> stream() {
-        return streamWithFiles().map(Pair::getLeft);
+        return streamWithFiles().map(Pair::left);
     }
 
     public Stream<Pair<M, File>> streamWithFiles() {

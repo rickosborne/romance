@@ -2,6 +2,7 @@ package org.rickosborne.romance.client.command;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.Request;
 import okhttp3.ResponseBody;
 import org.openqa.selenium.Cookie;
 import org.rickosborne.romance.AudiobookStore;
@@ -18,7 +19,9 @@ import org.rickosborne.romance.util.BookBot;
 import org.rickosborne.romance.util.BrowserStuff;
 import org.rickosborne.romance.util.IgnoredBooks;
 import org.rickosborne.romance.util.SheetStuff;
+import org.rickosborne.romance.util.ZipStuff;
 import picocli.CommandLine;
+import retrofit2.Call;
 import retrofit2.Response;
 
 import java.io.File;
@@ -175,94 +178,120 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                 });
                 log.info("Cookie: {}", cookieHeader);
             }
-            final AudiobookStoreSuggestService service = bot.getAudiobookStoreSuggestService();
-            try {
-                log.info("Book: {} {}", book.toString(), book.getAudiobookStoreSku());
-                final Response<List<LibraryFileV2>> libraryFilesResponse = service.getMyLibraryFiles(
-                    // AudiobookStoreSuggestService.MyLibraryFilesMethod.GetM4bFiles.name(),
-                    book.getAudiobookStoreSku(),
-                    requestVerificationToken,
-                    cookieHeader
-                ).execute();
-                if (libraryFilesResponse.isSuccessful()) {
-                    final List<LibraryFileV2> libraryFilesList = libraryFilesResponse.body();
-                    if (libraryFilesList != null && !libraryFilesList.isEmpty()) {
-                        final int fileCount = libraryFilesList.size();
-                        boolean gotAny = false;
-                        final String dirName = fileNameForBook(book);
-                        final Path doneDir = outPath.resolve(dirName);
-                        final List<AudiobookShelfMetadataJson.Chapter> chapters = new LinkedList<>();
-                        final URL imageUrl = book.getImageUrl();
-                        File coverFile = coverArtIn(doneDir);
-                        if (imageUrl != null && coverFile == null) {
-                            log.info("Downloading art: {}", imageUrl);
-                            coverFile = downloadImage(imageUrl, (contentType) -> {
-                                final String ext = Optional.ofNullable(extensionForContentType(contentType)).orElse(".bin");
-                                try {
-                                    Files.createDirectories(doneDir);
-                                } catch (IOException e) {
-                                    log.error("Could not download art: [{}] {}", e.getClass().getSimpleName(), e.getMessage());
-                                }
-                                return doneDir.resolve("cover" + ext).toFile();
-                            });
-                        }
-                        for (int i = 1; i <= fileCount; i++) {
-                            final LibraryFileV2 libraryFile = libraryFilesList.get(i - 1);
-                            final String partSuffix = fileCount > 1 ? " (part " + i + " of " + fileCount + ")" : "";
-                            final String fileName = dirName + partSuffix + ".m4b";
-                            final String partFileName = dirName + partSuffix + ".partial.m4b";
-                            log.info("Downloading: {}", fileName);
-                            final File partFile = tempPath.resolve(partFileName).toFile();
-                            final File doneFile = doneDir.resolve(fileName).toFile();
-                            if (doneFile.exists()) {
-                                continue;
-                            }
+            if (tryFetchFile(bot, book, 2)) {
+                log.info("Got M4B for {}", book);
+            } else if (tryFetchFile(bot, book, 1)) {
+                log.info("Got MP3 for {}", book);
+            } else {
+                log.warn("No downloads for {}", book);
+            }
+        }
+    }
+
+    private boolean tryFetchFile(final BookBot bot, final BookModel book, final int format) {
+        final AudiobookStoreSuggestService service = bot.getAudiobookStoreSuggestService();
+        final String fileExt = format == 1 ? ".zip" : ".m4b";
+        try {
+            log.info("Book: {} {}", book.toString(), book.getAudiobookStoreSku());
+            final Call<List<LibraryFileV2>> serviceCall = service.getMyLibraryFiles(
+                // AudiobookStoreSuggestService.MyLibraryFilesMethod.GetM4bFiles.name(),
+                book.getAudiobookStoreSku(),
+                requestVerificationToken,
+                format,
+                cookieHeader
+            );
+            final Request request = serviceCall.request();
+            log.info("{} {}", request.method(), request.url());
+            final Response<List<LibraryFileV2>> libraryFilesResponse = serviceCall.execute();
+            if (libraryFilesResponse.isSuccessful()) {
+                final List<LibraryFileV2> libraryFilesList = libraryFilesResponse.body();
+                if (libraryFilesList != null && !libraryFilesList.isEmpty()) {
+                    final int fileCount = libraryFilesList.size();
+                    boolean gotAny = false;
+                    final String dirName = fileNameForBook(book);
+                    final Path doneDir = outPath.resolve(dirName);
+                    final List<AudiobookShelfMetadataJson.Chapter> chapters = new LinkedList<>();
+                    final URL imageUrl = book.getImageUrl();
+                    File coverFile = coverArtIn(doneDir);
+                    if (imageUrl != null && coverFile == null) {
+                        log.info("Downloading art: {}", imageUrl);
+                        coverFile = downloadImage(imageUrl, (contentType) -> {
+                            final String ext = Optional.ofNullable(extensionForContentType(contentType)).orElse(".bin");
                             try {
-                                final Response<ResponseBody> download = service.downloadFile(
-                                    fileName,
-                                    book.getAudiobookStoreSku(),
-                                    URLDecoder.decode(libraryFile.getUrl(), StandardCharsets.UTF_8),
-                                    cookieHeader
-                                ).execute();
-                                if (download.isSuccessful()) {
-                                    try (
-                                        final ResponseBody body = download.body();
-                                        final InputStream in = Objects.requireNonNull(body, "body").byteStream();
-                                        final OutputStream out = new FileOutputStream(partFile)
-                                    ) {
-                                        in.transferTo(out);
-                                    }
+                                Files.createDirectories(doneDir);
+                            } catch (IOException e) {
+                                log.error("Could not download art: [{}] {}", e.getClass().getSimpleName(), e.getMessage());
+                            }
+                            return doneDir.resolve("cover" + ext).toFile();
+                        });
+                    }
+                    for (int i = 1; i <= fileCount; i++) {
+                        final LibraryFileV2 libraryFile = libraryFilesList.get(i - 1);
+                        final String partSuffix = fileCount > 1 ? " (part " + i + " of " + fileCount + ")" : "";
+                        final String fileName = dirName + partSuffix + fileExt;
+                        final String partFileName = dirName + partSuffix + ".partial" + fileExt;
+                        log.info("Downloading: {}", fileName);
+                        final File partFile = tempPath.resolve(partFileName).toFile();
+                        final File doneFile = doneDir.resolve(fileName).toFile();
+                        if (doneFile.exists()) {
+                            continue;
+                        }
+                        try {
+                            final Response<ResponseBody> download = service.downloadFile(
+                                fileName,
+                                book.getAudiobookStoreSku(),
+                                URLDecoder.decode(libraryFile.getUrl(), StandardCharsets.UTF_8),
+                                cookieHeader
+                            ).execute();
+                            if (download.isSuccessful()) {
+                                try (
+                                    final ResponseBody body = download.body();
+                                    final InputStream in = Objects.requireNonNull(body, "body").byteStream();
+                                    final OutputStream out = new FileOutputStream(partFile)
+                                ) {
+                                    in.transferTo(out);
+                                }
+                                Files.createDirectories(doneDir);
+                                if (format == 2) {
                                     final File ffFile = BookTags.applyFFTags(partFile, book, tempPath, fileCount, coverFile);
                                     // BookTags.applyTags(partFile, book, new BookTags.Extras(fileCount, i));
-                                    Files.createDirectories(doneDir);
                                     Files.move(partFile.toPath(), doneFile.toPath());
                                     if (ffFile != null) {
                                         Files.move(ffFile.toPath(), doneDir.resolve(ffFile.getName()));
                                     }
-                                    gotAny = true;
-                                } else {
-                                    log.error("Download was not successful: {}, {}", download.code(), download.message());
+                                } else if (format == 1) {
+                                    final int unzippedCount = ZipStuff.unzipFiles(partFile.toPath(), doneDir);
+                                    if (unzippedCount > 0) {
+                                        Files.deleteIfExists(partFile.toPath());
+                                    } else {
+                                        log.error("No files unzipped: {}", partFileName);
+                                    }
                                 }
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
+                                gotAny = true;
+                            } else {
+                                log.error("Download was not successful: {}, {}", download.code(), download.message());
                             }
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
                         }
-                        if (gotAny) {
-                            final File metadataFile = doneDir.resolve("metadata.json").toFile();
-                            if (!metadataFile.exists()) {
-                                final AudiobookShelfMetadataJson metadata = metadataFromBook(book);
-                                bot.getObjectWriter().writeValue(metadataFile, metadata);
-                            }
+                    }
+                    if (gotAny) {
+                        final File metadataFile = doneDir.resolve("metadata.json").toFile();
+                        if (!metadataFile.exists()) {
+                            final AudiobookShelfMetadataJson metadata = metadataFromBook(book);
+                            bot.getObjectWriter().writeValue(metadataFile, metadata);
                         }
-                    } else {
-                        log.error("Did not get result from library files: {}", libraryFilesResponse.message());
+                        return true;
                     }
                 } else {
-                    log.error("Did not fetch library files: {}, {}", libraryFilesResponse.code(), libraryFilesResponse.message());
+                    log.error("Did not get result from library files: {}", libraryFilesResponse.message());
                 }
-            } catch (IOException err) {
-                log.error("Failed to fetch library files", err);
+            } else {
+                log.error("Did not fetch library files: {}, {} to {}", libraryFilesResponse.code(), libraryFilesResponse.message(), request.url());
             }
+        } catch (IOException err) {
+            log.error("Failed to fetch library files", err);
         }
+        return false;
     }
 }

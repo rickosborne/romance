@@ -33,7 +33,7 @@ public interface AudiobookStoreSuggestService {
     String CACHE_NAME = "abs";
     int DELAY_SECONDS = 5;
     String DOWNLOAD_PATH = "/DownloadFile";
-    String MY_LIBRARY_PATH = "/Handlers/MyLibrary?handler=GetAudioFileDetails&Format=2";
+    String MY_LIBRARY_PATH = "/Handlers/MyLibrary?handler=GetAudioFileDetails";
     String SUGGEST_PATH = "/SearchSuggest?SearchType=100";
 
     static AudiobookStoreSuggestService build() {
@@ -52,7 +52,7 @@ public interface AudiobookStoreSuggestService {
     @GET(DOWNLOAD_PATH)
     @Headers({
         "Accept: */*; q=0.1",
-        "Referer: https://audiobookstore.com/my-library.aspx",
+        "Referer: https://audiobookstore.com/my-library",
         "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/116.0"
     })
     Call<ResponseBody> downloadFile(
@@ -138,7 +138,7 @@ public interface AudiobookStoreSuggestService {
     @GET(MY_LIBRARY_PATH)
     @Headers({
         "Accept: application/json, text/javascript, */*; q=0.01",
-        "Referer: https://audiobookstore.com/my-library.aspx",
+        "Referer: https://audiobookstore.com/my-library",
         "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/116.0",
         "X-Requested-With: XMLHttpRequest"
     })
@@ -146,6 +146,7 @@ public interface AudiobookStoreSuggestService {
         // @Query("Method") String method,
         @Query("BookId") String sku,
         @Query("__RequestVerificationToken") String requestVerificationToken,
+        @Query("Format") int format,
         @Header("Cookie") String cookieHeader
     );
 

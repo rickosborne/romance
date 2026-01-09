@@ -24,9 +24,9 @@ public class TABSBooksSource {
         @Override
         public Stream<? extends Arguments> provideArguments(final ExtensionContext context) throws Exception {
             return bookInfoStore.streamWithFiles()
-                .filter(pair -> pair.getLeft().getAudioFiles() != null && !pair.getLeft().getAudioFiles().isEmpty())
-                .sorted(Comparator.comparing(p -> p.getLeft().getTitle()))
-                .map(p -> Arguments.of(p.getLeft(), p.getRight()));
+                .filter(pair -> pair.left().getAudioFiles() != null && !pair.left().getAudioFiles().isEmpty())
+                .sorted(Comparator.comparing(p -> p.left().getTitle()))
+                .map(p -> Arguments.of(p.left(), p.right()));
         }
     }
 }

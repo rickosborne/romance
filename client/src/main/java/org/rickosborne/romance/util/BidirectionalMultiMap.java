@@ -34,13 +34,13 @@ public class BidirectionalMultiMap<LeftT, RightT, KeyT> {
         }
         final Pair<KeyT, LeftT> leftPair = originalLeft(left);
         final Pair<KeyT, RightT> rightPair = originalRight(right);
-        final KeyT leftKey = leftPair == null ? this.leftKey(left) : leftPair.getLeft();
-        final KeyT rightKey = rightPair == null ? this.rightKey(right) : rightPair.getLeft();
+        final KeyT leftKey = leftPair == null ? this.leftKey(left) : leftPair.left();
+        final KeyT rightKey = rightPair == null ? this.rightKey(right) : rightPair.left();
         if (leftKey == null || rightKey == null) {
             return false;
         }
-        final LeftT originalLeft = leftPair == null ? left : leftPair.getRight();
-        final RightT originalRight = rightPair == null ? right : rightPair.getRight();
+        final LeftT originalLeft = leftPair == null ? left : leftPair.right();
+        final RightT originalRight = rightPair == null ? right : rightPair.right();
         if (originalLeft == null || originalRight == null) {
             return false;
         }
@@ -69,8 +69,8 @@ public class BidirectionalMultiMap<LeftT, RightT, KeyT> {
         if (leftPair == null || rightPair == null) {
             return false;
         }
-        final KeyT leftKey = leftPair.getLeft();
-        final KeyT rightKey = rightPair.getLeft();
+        final KeyT leftKey = leftPair.left();
+        final KeyT rightKey = rightPair.left();
         final List<KeyT> rights = rightsFromLeftKey.get(leftKey);
         final List<KeyT> lefts = leftsFromRightKey.get(rightKey);
         if (rights == null || lefts == null) {
@@ -194,7 +194,7 @@ public class BidirectionalMultiMap<LeftT, RightT, KeyT> {
         if (pair == null) {
             return Collections.emptyList();
         }
-        final KeyT tKey = pair.getLeft();
+        final KeyT tKey = pair.left();
         final List<KeyT> uKeys = othersFromKey.get(tKey);
         if (uKeys == null) {
             return Collections.emptyList();

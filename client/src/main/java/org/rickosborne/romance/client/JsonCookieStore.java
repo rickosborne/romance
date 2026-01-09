@@ -3,7 +3,6 @@ package org.rickosborne.romance.client;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.db.DbJsonWriter;
 import org.rickosborne.romance.util.Pair;
@@ -26,7 +25,7 @@ public class JsonCookieStore implements CookieStore {
     public static JsonCookieStore fromPath(@NonNull final Path path) {
         try {
             final SimpleStore simpleStore = DbJsonWriter.getJsonMapper().readerFor(SimpleStore.class).readValue(path.toFile());
-            final List<Pair<URI, HttpCookie>> cookies = simpleStore.getCookies().stream()
+            final List<Pair<URI, HttpCookie>> cookies = simpleStore.cookies().stream()
                 .map(s -> Pair.build(s.getUri(), s.toHttpCookie()))
                 .collect(Collectors.toList());
             return new JsonCookieStore(cookies, path);
@@ -47,11 +46,11 @@ public class JsonCookieStore implements CookieStore {
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
-        cookies.removeIf(pair -> pair.getLeft().equals(shortUri) && pair.getRight().getName().equals(cookie.getName()));
+        cookies.removeIf(pair -> pair.left().equals(shortUri) && pair.right().getName().equals(cookie.getName()));
         cookies.add(Pair.build(shortUri, cookie));
         final List<SimpleCookie> simpleCookies = cookies.stream().map(pair -> {
-                final URI u = pair.getLeft();
-                final HttpCookie c = pair.getRight();
+                final URI u = pair.left();
+                final HttpCookie c = pair.right();
                 final URL url;
                 try {
                     url = u == null ? null : u.toURL();
@@ -60,7 +59,7 @@ public class JsonCookieStore implements CookieStore {
                 }
                 return new SimpleCookie(c.getName(), c.getPath(), url, c.getValue());
             })
-            .sorted(Comparator.comparing(SimpleCookie::getUri).thenComparing(SimpleCookie::getName))
+            .sorted(Comparator.comparing(SimpleCookie::getUri).thenComparing(SimpleCookie::name))
             .collect(Collectors.toList());
         try {
             log.debug("Updating cookie store: " + storePath);
@@ -74,8 +73,8 @@ public class JsonCookieStore implements CookieStore {
     public List<HttpCookie> get(final URI uri) {
         final String full = uri.toString();
         return cookies.stream()
-            .filter(pair -> full.startsWith(pair.getLeft().toString()))
-            .map(Pair::getRight)
+            .filter(pair -> full.startsWith(pair.left().toString()))
+            .map(Pair::right)
             .collect(Collectors.toList());
     }
 
@@ -89,14 +88,14 @@ public class JsonCookieStore implements CookieStore {
     @Override
     public List<HttpCookie> getCookies() {
         return cookies.stream()
-            .map(Pair::getRight)
+            .map(Pair::right)
             .collect(Collectors.toList());
     }
 
     @Override
     public List<URI> getURIs() {
         return cookies.stream()
-            .map(Pair::getLeft)
+            .map(Pair::left)
             .distinct()
             .collect(Collectors.toList());
     }
@@ -112,33 +111,25 @@ public class JsonCookieStore implements CookieStore {
         return true;
     }
 
-    @Value
-    static class SimpleCookie {
-        String name;
-        String path;
-        URL url;
-        String value;
+    record SimpleCookie(String name, String path, URL url, String value) {
+            @JsonIgnore
+            public URI getUri() {
+                try {
+                    return url == null ? null : url.toURI().normalize();
+                } catch (URISyntaxException e) {
+                    throw new RuntimeException("Invalid URI: " + url, e);
+                }
+            }
 
-        @JsonIgnore
-        public URI getUri() {
-            try {
-                return url == null ? null : url.toURI().normalize();
-            } catch (URISyntaxException e) {
-                throw new RuntimeException("Invalid URI: " + url, e);
+            public HttpCookie toHttpCookie() {
+                final HttpCookie cookie = new HttpCookie(name, value);
+                cookie.setPath(path);
+                cookie.setDomain(url.getHost());
+                cookie.setSecure("https".equals(url.getProtocol()));
+                return cookie;
             }
         }
 
-        public HttpCookie toHttpCookie() {
-            final HttpCookie cookie = new HttpCookie(name, value);
-            cookie.setPath(path);
-            cookie.setDomain(url.getHost());
-            cookie.setSecure("https".equals(url.getProtocol()));
-            return cookie;
-        }
-    }
-
-    @Value
-    static class SimpleStore {
-        List<SimpleCookie> cookies;
+    record SimpleStore(List<SimpleCookie> cookies) {
     }
 }

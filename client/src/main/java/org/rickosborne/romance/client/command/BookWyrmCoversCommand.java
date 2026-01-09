@@ -75,8 +75,8 @@ public class BookWyrmCoversCommand extends ASheetCommand {
         final Map<String, String> authorMatch = new HashMap<>();
         for (int i = 0; i < authorModels.size(); i++) {
             final Triple<String, AuthorModel, Integer> triple = authorModels.get(i);
-            final String name = triple.getLeft();
-            final Integer dbId = triple.getRight();
+            final String name = triple.left();
+            final Integer dbId = triple.right();
             authorMatch.put("author_match-" + i, dbId == null ? name : String.valueOf(dbId));
         }
         Integer bookId;
@@ -102,11 +102,11 @@ public class BookWyrmCoversCommand extends ASheetCommand {
             datePublish == null ? null : datePublish.getMonthValue(),
             datePublish == null ? null : datePublish.getDayOfMonth(),
             authorModels.stream().map(t -> {
-                final AuthorModel author = t.getMiddle();
+                final AuthorModel author = t.middle();
                 if (author != null && author.getName() != null) {
                     return author.getName();
                 }
-                return t.getLeft();
+                return t.left();
             }).collect(Collectors.toList()),
             book.getImageUrl(),
             book.getAudiobookStoreUrl() == null ? null : BookWyrmService.PhysicalFormat.AudiobookFormat,
@@ -156,13 +156,13 @@ public class BookWyrmCoversCommand extends ASheetCommand {
                 }
                 final BookModel jsonBook = jsonStore.findLikeOrMatch(sheetBook, bookLikeFilter(sheetBook));
                 final Pair<BookModel, Integer> pgPair = pgBookStore.findLikeForUser(sheetBook, bookWyrmConfig.getUserId());
-                BookModel pgBook = pgPair == null ? null : pgPair.getLeft();
+                BookModel pgBook = pgPair == null ? null : pgPair.left();
                 final Integer bookId;
                 if (pgBook == null) {
                     log.info("Could not find: {}", sheetBook);
                     bookId = addBook(bookSchema.mergeModels(jsonBook, sheetBook), pgAuthorStore, pgBookStore);
                 } else {
-                    bookId = pgPair.getRight();
+                    bookId = pgPair.right();
                 }
                 if (bookId == null) {
                     log.error("!!!No bookId for {}", sheetBook);

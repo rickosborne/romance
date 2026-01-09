@@ -581,7 +581,7 @@ public class FixShelfCommand extends ASheetCommand {
             final Map<File, FileStuff.TrackAndCount> fileTracks = files.stream()
                 .map(f -> Pair.build(f, interpretFileParts(f.getName(), book)))
                 .filter(Pair::hasRight)
-                .collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
+                .collect(Collectors.toMap(Pair::left, Pair::right));
             Integer trackCount = null;
             final Set<Integer> trackCounts = fileTracks.values().stream().map(FileStuff.TrackAndCount::getCount)
                 .filter(Objects::nonNull)

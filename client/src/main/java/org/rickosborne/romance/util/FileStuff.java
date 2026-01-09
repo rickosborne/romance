@@ -82,9 +82,9 @@ public class FileStuff {
             for (final Map.Entry<String, BookAttributes> entry : FileStuff.FILE_NAME_ATTRIBUTES.entrySet()) {
                 if (namedGroups.containsKey(entry.getKey())) {
                     final Pair<String, BookAttributes> pair = Pair.build(matcher.group(entry.getKey()), entry.getValue());
-                    if (pair.getRight().getAttribute(book) == null) {
-                        final BookAttributes attr = pair.getRight();
-                        final String value = pair.getLeft();
+                    if (pair.right().getAttribute(book) == null) {
+                        final BookAttributes attr = pair.right();
+                        final String value = pair.left();
                         attr.setAttribute(book, value);
                     }
                 }

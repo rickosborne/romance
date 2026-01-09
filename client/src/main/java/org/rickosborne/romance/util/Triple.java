@@ -1,12 +1,6 @@
 package org.rickosborne.romance.util;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Value;
-
-@Value
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class Triple<L, M, R> {
+public record Triple<L, M, R>(L left, M middle, R right) {
     public static <L, M, R> Triple<L, M, R> build(
         final L left,
         final M middle,
@@ -19,10 +13,6 @@ public class Triple<L, M, R> {
         final L left,
         final Pair<M, R> pair
     ) {
-        return new Triple<>(left, pair == null ? null : pair.getLeft(), pair == null ? null : pair.getRight());
+        return new Triple<>(left, pair == null ? null : pair.left(), pair == null ? null : pair.right());
     }
-
-    L left;
-    M middle;
-    R right;
 }

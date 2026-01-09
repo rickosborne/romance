@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.SneakyThrows;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.rickosborne.romance.client.bookwyrm.BookWyrmConfig;
 import org.rickosborne.romance.client.bookwyrm.Shelf;
@@ -46,6 +45,14 @@ import static org.rickosborne.romance.util.StringStuff.urlFromString;
 @Slf4j
 @Getter
 public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
+    public static LocalDate asLocalDate(final ResultSet rs, final String columnName) throws SQLException {
+        final OffsetDateTime offsetDateTime = rs.getObject(columnName, OffsetDateTime.class);
+        if (offsetDateTime != null) {
+            return offsetDateTime.toLocalDate();
+        }
+        return null;
+    }
+
     protected static String idFromAuthorTitle(final String author, final String title) {
         if (author == null || title == null) {
             return null;
@@ -57,7 +64,6 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
         }
         return aa + ":" + at;
     }
-
     @Getter(lazy = true)
     private final IdCache idCache = Once.supply(() -> {
         final IdCache cache = new IdCache();
@@ -151,7 +157,7 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
             ps -> ps.setInt(1, dbId),
             this::fromResultSet
         );
-        final BookModel book = pair == null ? null : pair.getLeft();
+        final BookModel book = pair == null ? null : pair.left();
         if (book == null) {
             return null;
         }
@@ -160,8 +166,8 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
             book.setAuthorName(String.join(", ", authorNames));
         }
         for (final Pair<String, URL> linkPair : findLinksForDbId(dbId)) {
-            final String domain = linkPair.getLeft();
-            final URL url = linkPair.getRight();
+            final String domain = linkPair.left();
+            final URL url = linkPair.right();
             if ("audiobookstore.com".equals(domain)) {
                 book.setAudiobookStoreUrl(url);
             } else if ("goodreads.com".equals(domain)) {
@@ -194,7 +200,7 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
 
     @Override
     public BookModel findLike(final BookModel model) {
-        return Optional.ofNullable(findLikeForUser(model, null)).map(Pair::getLeft).orElse(null);
+        return Optional.ofNullable(findLikeForUser(model, null)).map(Pair::left).orElse(null);
     }
 
     public Pair<BookModel, Integer> findLikeForUser(final BookModel model, final Integer userId) {
@@ -265,8 +271,7 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
     }
 
     public ReadDates findReadDatesForDbId(final int dbId, final int userId) {
-        return queryOne("" +
-            "SELECT start_date, finish_date " +
+        return queryOne("SELECT start_date, finish_date " +
             "FROM bookwyrm_readthrough " +
             "WHERE (book_id = ?) AND (user_id = ?)", ps -> {
             ps.setInt(1, dbId);
@@ -275,14 +280,6 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
             .finishDate(asLocalDate(rs, "finish_date"))
             .startDate(asLocalDate(rs, "start_date"))
             .build());
-    }
-
-    public static LocalDate asLocalDate(final ResultSet rs, final String columnName) throws SQLException {
-        final OffsetDateTime offsetDateTime = rs.getObject(columnName, OffsetDateTime.class);
-        if (offsetDateTime != null) {
-            return offsetDateTime.toLocalDate();
-        }
-        return null;
     }
 
     private Pair<BookModel, Integer> fromResultSet(final ResultSet rs) throws SQLException {
@@ -456,9 +453,6 @@ public class BookWyrmPGBookStore extends BookWyrmPGStore<BookModel> {
     }
 
     @Builder
-    @Value
-    static class ReadDates {
-        LocalDate finishDate;
-        LocalDate startDate;
+    record ReadDates(LocalDate finishDate, LocalDate startDate) {
     }
 }

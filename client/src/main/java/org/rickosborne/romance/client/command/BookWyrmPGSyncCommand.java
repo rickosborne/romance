@@ -34,7 +34,7 @@ public class BookWyrmPGSyncCommand extends ASheetCommand {
             log.info("Titles in ID cache: {}", idCache.getCount());
             for (final BookModel sheetBook : sheetBookStore) {
                 final Pair<BookModel, Integer> pair = db.findLikeForUser(sheetBook, bookWyrmConfig.getUserId());
-                final BookModel dbBook = pair == null ? null : pair.getLeft();
+                final BookModel dbBook = pair == null ? null : pair.left();
                 if (dbBook == null) {
                     log.debug("Could not find: {}", sheetBook);
                     continue;
