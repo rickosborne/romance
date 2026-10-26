@@ -36,6 +36,8 @@ public class BookStuff {
             .replaceAll("\\s+", " ")
             .replaceAll("(?i)\\s+\\([^)]*(?:unabridged|book\\s+\\d)[^)]*\\)", "")
             .replaceAll("(?i)\\s+audiobook$", "")
+            .replaceAll("(?i)\\s+A GMA Book Club Pick", "")
+            .replaceAll("(?i)\\s+\\(Movie Tie-in\\)", "")
             .trim());
     }
 }

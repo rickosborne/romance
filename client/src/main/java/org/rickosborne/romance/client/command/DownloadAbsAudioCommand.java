@@ -176,8 +176,10 @@ public class DownloadAbsAudioCommand extends ASheetCommand {
                         .map(c -> c.getName() + "=" + URLEncoder.encode(c.getValue(), StandardCharsets.UTF_8))
                         .collect(Collectors.joining("; "));
                 });
-                log.info("Cookie: {}", cookieHeader);
+            } else {
+                cookieHeader = cookieHeader.replaceFirst("^Cookie: ", "");
             }
+            log.info("Cookie: {}", cookieHeader);
             if (tryFetchFile(bot, book, 2)) {
                 log.info("Got M4B for {}", book);
             } else if (tryFetchFile(bot, book, 1)) {

@@ -2,7 +2,6 @@ package org.rickosborne.romance.client.reddit;
 
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import net.dean.jraw.RedditClient;
 import net.dean.jraw.http.OkHttpNetworkAdapter;
@@ -57,11 +56,9 @@ public class Reddit {
     }
 
     public static URL urlFor(final PublicContribution<?> contribution) {
-        if (contribution instanceof Comment) {
-            final Comment comment = (Comment) contribution;
+        if (contribution instanceof final Comment comment) {
             return StringStuff.urlFromString(comment.getUrl());
-        } else if (contribution instanceof Submission) {
-            final Submission submission = (Submission) contribution;
+        } else if (contribution instanceof final Submission submission) {
             return StringStuff.urlFromString(submission.getUrl());
         } else {
             log.error("Cannot find a URL for contribution: " + contribution);
@@ -84,7 +81,7 @@ public class Reddit {
     private Credentials buildCredentials() {
         final RedditCredentialsConfig config = getConfig();
         return Credentials.userless(config.appId, config.secret, config.deviceId);
-//        return Credentials.script(config.userName, config.password, config.appId, config.secret);
+        //        return Credentials.script(config.userName, config.password, config.appId, config.secret);
     }
 
     @NotNull
@@ -124,8 +121,7 @@ public class Reddit {
         if (contribution == null) {
             return null;
         }
-        if (contribution instanceof Comment) {
-            final Comment comment = (Comment) contribution;
+        if (contribution instanceof final Comment comment) {
             parentFullName = comment.getParentFullName();
             if (maxCommentDepth < 1) {
                 comments = null;
@@ -137,9 +133,8 @@ public class Reddit {
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
             }
-        } else if (contribution instanceof Submission) {
+        } else if (contribution instanceof final Submission submission) {
             parentFullName = null;
-            final Submission submission = (Submission) contribution;
             if (redditClient == null) {
                 comments = null;
             } else {
@@ -166,13 +161,7 @@ public class Reddit {
         );
     }
 
-    @Value
-    private static class RedditCredentialsConfig {
-        String appId;
-        UUID deviceId;
-        String password;
-        URI redirectUri;
-        String secret;
-        String userName;
+    private record RedditCredentialsConfig(String appId, UUID deviceId, String password, URI redirectUri, String secret,
+                                           String userName) {
     }
 }
