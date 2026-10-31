@@ -1,5 +1,6 @@
 package org.rickosborne.romance.client;
 
+import lombok.Getter;
 import okhttp3.OkHttpClient;
 import org.rickosborne.romance.AudiobookStore;
 import org.rickosborne.romance.client.response.BookInformation;
@@ -11,17 +12,21 @@ import retrofit2.Call;
 import retrofit2.Retrofit;
 import retrofit2.converter.jackson.JacksonConverterFactory;
 import retrofit2.http.GET;
+import retrofit2.http.Header;
 import retrofit2.http.Query;
 
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.UUID;
 
 import static org.rickosborne.romance.AudiobookStore.API_PATH;
+import static org.rickosborne.romance.AudiobookStore.SUGGEST_BASE;
 
 public interface AudiobookStoreService {
     Path CACHE_BASE_PATH = Path.of(".cache");
     String CACHE_KEY = "abs-api";
+    String MARK_AS_COMPLETE_PATH = SUGGEST_BASE + "/Handlers/MyLibrary?handler=MarkAsComplete";
     String TRACKING_HERPES = "OSType=android&Device=Google%20sdk_gphone64_arm64&OSVersion=12&AppVersion=v2.1.8.163%20Build%20154&RDId=309ad284-3a04-4314-8582-20901a50bf76";
     String PLAYBACK_POSITIONS_PATH = API_PATH + "PlaybackPositions.aspx?Method=GET&IsPodcast=false&" + TRACKING_HERPES;
     String BOOKMARKS_PATH = API_PATH + "Bookmarks.aspx?Method=Get&IsPodcast=false&" + TRACKING_HERPES;
@@ -63,6 +68,15 @@ public interface AudiobookStoreService {
         @Query("Password") String password
     );
 
+    @GET(MARK_AS_COMPLETE_PATH)
+    Call<String> markAsComplete(
+        @Query("UserId") UUID userGuid,
+        @Query("Sku") String tabsSku,
+        @Query("IsComplete") boolean isComplete,
+        @Query("__RequestVerificationToken") String requestVerificationToken,
+        @Header("Cookie") String tabsCookie
+    );
+
     @GET(PLAYBACK_POSITIONS_PATH)
     Call<List<PlaybackPosition>> playbackPositions(
         @Query("UserGUID") String userGuid,
@@ -87,4 +101,10 @@ public interface AudiobookStoreService {
     Call<UserInformation2> userInformation2(
         @Query("UserGuid") String userGuid
     );
+
+    @Getter
+    class MarkCompleteResponse {
+        public String status;
+        public String statusMessage;
+    }
 }

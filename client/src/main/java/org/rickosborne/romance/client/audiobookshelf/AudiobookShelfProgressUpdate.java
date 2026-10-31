@@ -13,6 +13,9 @@ public class AudiobookShelfProgressUpdate {
     String ebookLocation;
     Double ebookProgress;
     UUID episodeId;
+    /**
+     * Epoch ms.
+     */
     Long finishedAt;
     Boolean hideFromContinueListening;
     UUID id;

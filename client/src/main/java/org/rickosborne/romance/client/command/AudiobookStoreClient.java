@@ -38,6 +38,7 @@ import java.util.logging.LogManager;
         DownloadAbsAudioCommand.class,
         FixShelfCommand.class,
         ReTagAudioCommand.class,
+        SyncShelfTabsProgressCommand.class,
     }
 )
 public class AudiobookStoreClient implements Callable<Integer> {

@@ -1,5 +1,6 @@
 package org.rickosborne.romance.client.audiobookshelf;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
@@ -29,4 +30,12 @@ public class AudiobookShelfLibraryItem implements IAudiobookShelfAddedAt, IAudio
     String scanVersion;
     Long size;
     Long updatedAt;
+
+    @JsonIgnore
+    public String loggable() {
+        if (media == null) {
+            return "[AudiobookShelfLibraryItem " + (id == null ? "?" : id) + "]";
+        }
+        return media.loggable();
+    }
 }
